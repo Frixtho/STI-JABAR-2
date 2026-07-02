@@ -15,6 +15,8 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('role')->default('Staff');
+            $table->string('status')->default('Non-Aktif');
             $table->rememberToken();
             $table->timestamps();
         });

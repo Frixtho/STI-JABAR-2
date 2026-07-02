@@ -34,7 +34,8 @@
                     </svg>
                 </button>
                 <div id="adminSubmenu" class="hidden ml-7 mt-1 border-l border-white/10 pl-3">
-                    <a href="#" class="block px-2 py-2 text-sm text-pln-100 hover:text-white">Manage User</a>
+                    {{-- Diubah dari href="#" menjadi pemanggilan route Laravel --}}
+                    <a href="{{ route('manage-user') }}" class="block px-2 py-2 text-sm text-pln-100 hover:text-white">Manage User</a>
                 </div>
             </div>
 

@@ -80,7 +80,7 @@
                 {{-- ID / Email --}}
                 <div>
                     <label for="email" class="block text-xs font-semibold text-gray-700">
-                        ID Transaksi / Email
+                        Email
                     </label>
                     <div class="mt-1.5 relative">
                         <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
@@ -100,9 +100,6 @@
                         <label for="password" class="block text-xs font-semibold text-gray-700">
                             Password
                         </label>
-                        <a href="#" class="text-xs font-medium text-pln-700 hover:text-pln-800">
-                            Forgot Password?
-                        </a>
                     </div>
                     <div class="mt-1.5 relative">
                         <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
@@ -119,14 +116,17 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.644C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.437 0 .644C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                             </svg>
-                        </button>
+                        </button> 
                     </div>
+                    <a href="#" class="text-xs font-medium text-pln-700 hover:text-pln-800">
+                            Forgot Password?
+                    </a>
                 </div>
 
                 {{-- Remember device --}}
                 <div class="flex items-center gap-2 pt-1">
                     <input id="remember" name="remember" type="checkbox"
-                        class="h-4 w-4 rounded border-gray-300 text-pln-700 focus:ring-pln-700/40">
+                        class="h-4 w-4 rounded border-gray-300 text-pln-700 focus:ring-pln-700/40">   
                     <label for="remember" class="text-sm text-gray-600">
                         Remember this device for 30 days
                     </label>
@@ -139,7 +139,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 2.25c-3.14 2.1-6.46 2.79-9 2.79v6.02c0 5.7 3.87 9.8 9 10.94 5.13-1.14 9-5.24 9-10.94V5.04c-2.54 0-5.86-.69-9-2.79Z" />
                         <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4" />
                     </svg>
-                    Secure Login
+                    Login
                 </button>
 
                 <p class="text-center text-sm text-gray-500 pt-1">

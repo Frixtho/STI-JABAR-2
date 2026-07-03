@@ -13,6 +13,7 @@
     <script>
         tailwind.config = {
             theme: {
+                darkMode : 'class',
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'ui-sans-serif', 'system-ui'],

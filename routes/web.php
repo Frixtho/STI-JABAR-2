@@ -3,10 +3,9 @@
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\AddUserController;
-use Illuminate\Support\Facades\Route;
-use App\Models\User;
-use Illuminate\Http\Request;
 use App\Http\Controllers\ManageUserController;
+use App\Http\Controllers\SettingsController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -27,44 +26,15 @@ Route::middleware('auth')->group(function () {
         return view('dashboard');
     })->name('dashboard');
 
-Route::get('manage-user', function () {
-    // Mengambil semua data user, atau gunakan paginate(7) agar pas dengan pagination di UI kamu
-    $users = User::orderBy('created_at', 'desc')->paginate(7);
-    
-    return view('manageUser', compact('users'));
-})->name('manage-user');
+    Route::get('settings', [SettingsController::class, 'edit'])->name('settings');
+    Route::patch('settings', [SettingsController::class, 'update'])->name('settings.update');
+    Route::patch('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
 
-// Form Tambah User
-Route::get('manage-user/create', [AddUserController::class, 'create'])->name('manage-user.create');
+    // Manage User
+    Route::get('manage-user', [ManageUserController::class, 'index'])->name('manage-user');
+    Route::delete('manage-user/{id}', [ManageUserController::class, 'destroy'])->name('manage-user.destroy');
 
-// Proses Simpan User Baru
-Route::post('manage-user/store', [AddUserController::class, 'store'])->name('manage-user.store');
-
-Route::get('manage-user', function (Request $request) {
-    // Ambil kata kunci dari input 'search'
-    $search = $request->query('search');
-
-    // Query dasar untuk mengambil data user
-    $query = User::orderBy('created_at', 'desc');
-
-    // Jika user mengetikkan sesuatu di kolom search
-    if (!empty($search)) {
-        $query->where(function ($q) use ($search) {
-            $q->where('email', 'LIKE', '%' . $search . '%')
-              ->orWhere('name', 'LIKE', '%' . $search . '%');
-        });
-    }
-
-    // Paginate hasil pencarian (7 data per halaman)
-    $users = $query->paginate(7)->withQueryString(); // withQueryString agar pagination tidak mereset pencarian
-
-    return view('manageUser', compact('users'));
-})->name('manage-user');
-
-// Route untuk menampilkan halaman utama + filtering
-Route::get('/manage-user', [ManageUserController::class, 'index'])->name('manage-user');
-
-// Route untuk mengeksekusi penghapusan data
-Route::delete('/manage-user/{id}', [ManageUserController::class, 'destroy'])->name('manage-user.destroy');
-
+    // Add User
+    Route::get('manage-user/create', [AddUserController::class, 'create'])->name('manage-user.create');
+    Route::post('manage-user/store', [AddUserController::class, 'store'])->name('manage-user.store');
 });

@@ -49,12 +49,16 @@
 
         <div class="p-4 border-t border-white/10">
             <div class="flex items-center gap-3 px-2 py-2 rounded-md bg-white/5">
-                <div class="w-8 h-8 rounded-full bg-accent-400 text-pln-800 font-bold text-xs flex items-center justify-center">
-                    AC
+                <div class="w-8 h-8 rounded-full bg-accent-400 text-pln-800 font-bold text-xs flex items-center justify-center uppercase shrink-0">
+                    {{ implode('', array_map(fn($w) => $w[0] ?? '', array_slice(explode(' ', auth()->user()->name), 0, 2))) }}
                 </div>
-                <div class="leading-tight">
-                    <p class="text-sm font-semibold text-white">Admin Central</p>
-                    <p class="text-[11px] text-pln-100/70">admin@pln.co.id</p>
+                <div class="leading-tight min-w-0">
+                    <p class="text-sm font-semibold text-white truncate">{{ auth()->user()->name }}</p>
+                    <p class="text-[11px] text-pln-100/70 truncate">{{ auth()->user()->email }}</p>
+                    <span class="inline-flex items-center mt-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded
+                        {{ strcasecmp(auth()->user()->role, 'Admin') === 0 ? 'bg-accent-400 text-pln-800' : 'bg-white/10 text-pln-100' }}">
+                        {{ auth()->user()->role }}
+                    </span>
                 </div>
             </div>
             <div class="mt-3 space-y-1">
@@ -101,9 +105,14 @@
                     </svg>
                 </button>
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-semibold text-pln-800 dark:text-white">Profile</span>
-                    <div class="w-8 h-8 rounded-full bg-accent-400 text-pln-800 font-bold text-xs flex items-center justify-center">
-                        AC
+                    <div class="text-right leading-tight">
+                        <p class="text-sm font-semibold text-pln-800 dark:text-white">{{ auth()->user()->name }}</p>
+                        <p class="text-[10px] font-semibold uppercase tracking-wide {{ strcasecmp(auth()->user()->role, 'Admin') === 0 ? 'text-accent-500' : 'text-gray-400 dark:text-gray-500' }}">
+                            {{ auth()->user()->role }}
+                        </p>
+                    </div>
+                    <div class="w-8 h-8 rounded-full bg-pln-800 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                        {{ implode('', array_map(fn($w) => $w[0] ?? '', array_slice(explode(' ', auth()->user()->name), 0, 2))) }}
                     </div>
                 </div>
             </div>
@@ -207,6 +216,15 @@
                                     <label for="department" class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Department</label>
                                     <input id="department" type="text" value="{{ auth()->user()->department ?? '—' }}" disabled
                                         class="mt-1.5 w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/50 py-2.5 px-3 text-sm text-gray-500 dark:text-gray-400 cursor-not-allowed">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Role</label>
+                                    <div class="mt-1.5">
+                                        <span class="inline-flex items-center text-xs font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-md
+                                            {{ strcasecmp(auth()->user()->role, 'Admin') === 0 ? 'bg-accent-400 text-pln-800' : 'bg-gray-100 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400' }}">
+                                            {{ auth()->user()->role }}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -502,13 +520,13 @@
                         </div>
 
                         <div class="mt-8 flex items-center justify-end gap-3">
-                        <button type="button" id="cancelPreferensi" class="px-4 py-2.5 rounded-md text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
-                            Batalkan Perubahan
-                        </button>
-                        <button type="button" id="savePreferensi" class="px-4 py-2.5 rounded-md text-sm font-semibold text-white bg-pln-800 hover:bg-pln-700">
-                            Simpan Pengaturan
-                        </button>
-                    </div>
+                            <button type="button" id="cancelPreferensi" class="px-4 py-2.5 rounded-md text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                Batalkan Perubahan
+                            </button>
+                            <button type="button" id="savePreferensi" class="px-4 py-2.5 rounded-md text-sm font-semibold text-white bg-pln-800 hover:bg-pln-700">
+                                Simpan Pengaturan
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -602,12 +620,9 @@
         });
     }
 
-    // Tema yang lagi aktif dipakai sistem (tersimpan)
     const savedTheme = localStorage.getItem('theme') || 'light';
-    // Pilihan sementara di kartu (belum tentu di-apply)
     let pendingTheme = savedTheme;
 
-    // Klik kartu cuma mengubah pilihan visual, BELUM apply ke sistem
     document.querySelectorAll('.appearance-option').forEach((label) => {
         label.addEventListener('click', () => {
             pendingTheme = label.querySelector('input[type="radio"]').value;
@@ -615,7 +630,6 @@
         });
     });
 
-    // Klik "Simpan Pengaturan" -> baru apply beneran + simpan
     const savePreferensiBtn = document.getElementById('savePreferensi');
     if (savePreferensiBtn) {
         savePreferensiBtn.addEventListener('click', () => {
@@ -623,7 +637,6 @@
         });
     }
 
-    // Klik "Batalkan Perubahan" -> kembalikan pilihan kartu ke tema yang tersimpan
     const cancelPreferensiBtn = document.getElementById('cancelPreferensi');
     if (cancelPreferensiBtn) {
         cancelPreferensiBtn.addEventListener('click', () => {
@@ -632,11 +645,6 @@
         });
     }
 
-    // Saat halaman dimuat, kartu nunjukin tema yang lagi aktif tersimpan
     selectAppearanceCard(savedTheme);
-
-    // Initialize card selection to match current theme on page load
-    const currentTheme = localStorage.getItem('theme') || 'light';
-    selectAppearanceCard(currentTheme);
 </script>
 @endsection

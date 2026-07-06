@@ -48,12 +48,16 @@
 
         <div class="p-4 border-t border-white/10">
             <div class="flex items-center gap-3 px-2 py-2 rounded-md bg-white/5">
-                <div class="w-8 h-8 rounded-full bg-accent-400 text-pln-800 font-bold text-xs flex items-center justify-center">
-                    AC
+                <div class="w-8 h-8 rounded-full bg-accent-400 text-pln-800 font-bold text-xs flex items-center justify-center uppercase">
+                    {{ implode('', array_map(fn($w) => $w[0] ?? '', array_slice(explode(' ', auth()->user()->name), 0, 2))) }}
                 </div>
-                <div class="leading-tight">
-                    <p class="text-sm font-semibold text-white">Admin Central</p>
-                    <p class="text-[11px] text-pln-100/70">admin@pln.co.id</p>
+                <div class="leading-tight min-w-0">
+                    <p class="text-sm font-semibold text-white truncate">{{ auth()->user()->name }}</p>
+                    <p class="text-[11px] text-pln-100/70 truncate">{{ auth()->user()->email }}</p>
+                    <span class="inline-flex items-center mt-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded
+                        {{ strcasecmp(auth()->user()->role, 'Admin') === 0 ? 'bg-accent-400 text-pln-800' : 'bg-white/10 text-pln-100' }}">
+                        {{ auth()->user()->role }}
+                    </span>
                 </div>
             </div>
             <div class="mt-3 space-y-1">
@@ -101,7 +105,12 @@
                     <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500"></span>
                 </button>
                 <div class="flex items-center gap-2">
-                    <span class="text-sm font-semibold text-pln-800 dark:text-white">Profile</span>
+                    <div class="text-right leading-tight">
+                        <p class="text-sm font-semibold text-pln-800 dark:text-white">{{ auth()->user()->name }}</p>
+                        <p class="text-[10px] font-semibold uppercase tracking-wide {{ strcasecmp(auth()->user()->role, 'Admin') === 0 ? 'text-accent-500' : 'text-gray-400' }}">
+                            {{ auth()->user()->role }}
+                        </p>
+                    </div>
                     <div class="w-8 h-8 rounded-full bg-pln-800 text-white flex items-center justify-center">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />

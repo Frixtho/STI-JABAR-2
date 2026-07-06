@@ -32,6 +32,8 @@ Route::middleware('auth')->group(function () {
 
     // Manage User
     Route::get('manage-user', [ManageUserController::class, 'index'])->name('manage-user');
+    Route::get('manage-user/{id}/edit', [ManageUserController::class, 'edit'])->name('manage-user.edit');
+    Route::patch('manage-user/{id}', [ManageUserController::class, 'update'])->name('manage-user.update');
     Route::delete('manage-user/{id}', [ManageUserController::class, 'destroy'])->name('manage-user.destroy');
 
     // Add User

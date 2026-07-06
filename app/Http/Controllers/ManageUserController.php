@@ -4,61 +4,88 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ManageUserController extends Controller
 {
-    /**
-     * Menampilkan halaman daftar user dengan filter pencarian (Nama, Email, Role, Status).
-     */
     public function index(Request $request)
     {
-        // 1. Inisialisasi Query Builder dari model User
         $query = User::query();
 
-        // 2. Filter Pencarian Nama atau Email
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
-                // Gunakan ILIKE khusus PostgreSQL agar pencarian tidak case-sensitive
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'ILIKE', "%{$search}%")
                   ->orWhere('email', 'ILIKE', "%{$search}%");
             });
         }
 
-        // 3. Filter Berdasarkan Role (Disesuaikan dengan data uppercase di DB)
         if ($request->has('role') && $request->role != 'All' && $request->role != '') {
-            $query->where('role', $request->role); 
+            $query->where('role', $request->role);
         }
 
-        // 4. Filter Berdasarkan Status
         if ($request->has('status') && $request->status != 'All' && $request->status != '') {
             $query->where('status', $request->status);
         }
 
-        // 5. Ambil data dengan pagination (7 data per halaman agar rapi)
-        // withQueryString() memastikan query filter di URL tetap terbawa saat pindah halaman
-        $users = $query->paginate(7)->withQueryString();
+        $users = $query->orderBy('created_at', 'desc')->paginate(7)->withQueryString();
 
-        // 6. Lempar data ke view manageUser.blade.php
         return view('manageUser', compact('users'));
     }
 
-    /**
-     * Menghapus data pengguna berdasarkan ID.
-     */
-    public function destroy($id)
+    public function edit($id)
     {
+        // Hanya Admin yang boleh mengedit
+        if (strcasecmp(auth()->user()->role, 'Admin') !== 0) {
+            return redirect()->route('manage-user')->with('error', 'Hanya Admin yang dapat mengedit pengguna.');
+        }
+
         $user = User::findOrFail($id);
 
-        // 2. Proteksi mutlak: Jika emailnya adalah milik seeder utama, gagalkan proses hapus
+        return view('editUser', compact('user'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        if (strcasecmp(auth()->user()->role, 'Admin') !== 0) {
+            return redirect()->route('manage-user')->with('error', 'Hanya Admin yang dapat mengedit pengguna.');
+        }
+
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'nip' => ['required', 'string', Rule::unique('users', 'nip')->ignore($user->id)],
+            'department' => ['required', 'string'],
+            'role' => ['required', 'string'],
+            'status' => ['required', 'in:Aktif,Non-Aktif'],
+        ]);
+
+        // Lindungi akun master supaya rolenya tidak sengaja diubah jadi bukan Admin
+        if ($user->email === 'admin@pln.co.id' && $validated['role'] !== 'Admin') {
+            return back()->with('error', 'Role Admin PLN tidak boleh diubah.')->withInput();
+        }
+
+        $user->update($validated);
+
+        return redirect()->route('manage-user')->with('success', 'Data pengguna berhasil diperbarui.');
+    }
+
+    public function destroy($id)
+    {
+        if (strcasecmp(auth()->user()->role, 'Admin') !== 0) {
+            return redirect()->route('manage-user')->with('error', 'Hanya Admin yang dapat menghapus pengguna.');
+        }
+
+        $user = User::findOrFail($id);
+
         if ($user->email === 'admin@pln.co.id') {
             return redirect()->route('manage-user')->with('error', 'Gagal! Pengguna master sistem tidak boleh dihapus.');
         }
 
-        // 3. Jika lolos pengecekan, eksekusi hapus data
         $user->delete();
 
         return redirect()->route('manage-user')->with('success', 'Pengguna berhasil dihapus!');
     }
-
 }

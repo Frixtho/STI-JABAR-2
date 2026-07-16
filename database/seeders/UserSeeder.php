@@ -15,6 +15,8 @@ class UserSeeder extends Seeder
             'email' => 'admin@pln.co.id',
             'phone' => '081234567890',
             'password' => Hash::make('password123'),
+            'role' => 'ADMIN',
+            'status' => 'Aktif',
         ]);
     }
 }

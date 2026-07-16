@@ -31,6 +31,7 @@ class RegisteredUserController extends Controller
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:' . User::class],
             'phone' => ['required', 'string', 'max:30'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'nip' => ['required', 'string', 'max:20', 'unique:users'],
             'terms' => ['accepted'],
         ], [
             'terms.accepted' => 'You must agree to the Terms of Service and Privacy Policy.',
@@ -41,6 +42,7 @@ class RegisteredUserController extends Controller
             'email' => $validated['email'],
             'phone' => $validated['phone'],
             'password' => Hash::make($validated['password']),
+            'nip' => $request->nip,
         ]);
 
         event(new Registered($user));

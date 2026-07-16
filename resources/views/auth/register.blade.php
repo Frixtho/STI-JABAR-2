@@ -54,6 +54,24 @@
                         </div>
                     </div>
 
+                    {{-- NIP Field yang sudah disesuaikan --}}
+                    <div>
+                        <label for="nip" class="block text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
+                            NIP
+                        </label>
+                        <div class="mt-1.5 relative">
+                            <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                                {{-- Ikon untuk NIP --}}
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-5m-4 0V5a2 2 0 1 1 4 0v1m-4 0a2 2 0 1 0 4 0m-5 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm0 0h10M8 17h8" />
+                                </svg>
+                            </span>
+                            <input id="nip" name="nip" type="text" value="{{ old('nip') }}" required
+                                placeholder="Masukkan NIP"
+                                class="w-full rounded-md border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-3 text-sm text-gray-800 placeholder-gray-400 focus:border-pln-700 focus:bg-white focus:outline-none focus:ring-2 focus:ring-pln-700/20">
+                        </div>
+                    </div>
+
                     <div>
                         <label for="email" class="block text-[11px] font-semibold tracking-wide text-gray-500 uppercase">
                             Corporate Email

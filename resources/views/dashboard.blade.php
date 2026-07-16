@@ -19,23 +19,24 @@
                 Dashboard
             </a>
 
-            <div>
-                <button type="button" id="adminMenuToggle"
-                    class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium text-pln-100 hover:bg-white/5">
-                    <span class="flex items-center gap-3">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
+            @if(strcasecmp(auth()->user()->role, 'ADMIN') === 0)
+                <div>
+                    <button type="button" class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium text-white bg-white/5">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
+                            </svg>
+                            Admin
+                        </span>
+                        <svg class="w-3.5 h-3.5 rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
                         </svg>
-                        Admin
-                    </span>
-                    <svg id="adminMenuChevron" class="w-3.5 h-3.5 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                    </svg>
-                </button>
-                <div id="adminSubmenu" class="hidden ml-7 mt-1 border-l border-white/10 pl-3">
-                    <a href="{{ route('manage-user') }}" class="block px-2 py-2 text-sm text-pln-100 hover:text-white">Manage User</a>
+                    </button>
+                    <div class="ml-7 mt-1 border-l border-white/10 pl-3">
+                        <a href="{{ route('manage-user') }}" class="relative block px-2 py-2 text-sm text-white font-medium before:absolute before:-left-[13px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-[#e8e14a] before:rounded-r">Manage User</a>
+                    </div>
                 </div>
-            </div>
+            @endif
 
             <a href="{{ route('settings') }}" class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-pln-100 hover:bg-white/5">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

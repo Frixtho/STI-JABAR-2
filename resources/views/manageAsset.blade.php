@@ -109,10 +109,8 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="m20 20-3.5-3.5" />
                     </svg>
                 </span>
-                <form method="GET" action="{{ route('manage-asset') }}">
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama jalur SUTT..."
-                        class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-10 pr-3 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-pln-700 focus:bg-white dark:focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pln-700/20">
-                </form>
+                <input type="text" placeholder="Cari jalur SUTT atau data..."
+                    class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-10 pr-3 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-pln-700 focus:bg-white dark:focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pln-700/20">
             </div>
 
             <div class="flex items-center gap-5 shrink-0">
@@ -137,16 +135,7 @@
         </header>
 
         {{-- Content Area --}}
-        <main class="p-6 lg:p-10 space-y-5 w-full">
-
-            <div class="flex items-center justify-between">
-                <div>
-                    <nav class="flex items-center gap-1.5 text-sm mb-1">
-                        <span class="font-semibold text-gray-700 dark:text-gray-200">Manage Asset</span>
-                    </nav>
-                    <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Jalur SUTT</h1>
-                </div>
-            </div>
+        <main class="p-6 space-y-5">
 
             @if (session('success'))
                 <div class="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-4 py-3 text-sm text-green-700 dark:text-green-400">
@@ -154,49 +143,136 @@
                 </div>
             @endif
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-                <table class="min-w-full text-sm">
-                    <thead class="bg-gray-50 dark:bg-gray-700/50">
-                        <tr>
-                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Nama Jalur</th>
-                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Tegangan</th>
-                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">GI Awal</th>
-                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">GI Akhir</th>
-                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Jumlah Tower</th>
-                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Panjang Jalur (km)</th>
-                            <th class="px-5 py-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
-                        @forelse ($lines as $line)
-                            <tr>
-                                <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ $line->name }}</td>
-                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $line->voltage ?? '—' }}</td>
-                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $line->giStart->name ?? '— (belum kedeteksi)' }}</td>
-                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $line->giEnd->name ?? '— (belum kedeteksi)' }}</td>
-                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $line->towers_count }}</td>
-                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $line->path_length_km !== null ? number_format($line->path_length_km, 3) : '—' }}</td>
-                                <td class="px-5 py-3 text-right">
-                                    <a href="{{ route('manage-asset.show', $line) }}" class="text-[#004A54] dark:text-accent-400 font-medium hover:underline">Detail</a>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="7" class="px-5 py-8 text-center text-gray-400 dark:text-gray-500">Belum ada data jalur SUTT. Import lewat "Import Unit" dengan jenis data "Gardu Induk & Tower".</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+            @if (session('error'))
+                <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                    {{ session('error') }}
+                </div>
+            @endif
+
+            {{-- Breadcrumb --}}
+            <nav class="flex items-center gap-1.5 text-sm">
+                <a href="{{ route('dashboard') }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">Dashboard</a>
+                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+                <span class="font-semibold text-gray-700 dark:text-gray-200">Manage Asset</span>
+            </nav>
+
+            {{-- Header Title & Action Buttons --}}
+            <div class="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                    <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Manage Asset</p>
+                    <h1 class="text-xl font-bold text-pln-800 dark:text-white tracking-wide">Jalur SUTT</h1>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('manage-asset.import.form') }}" class="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                        Import Data
+                    </a>
+                    <a href="{{ route('manage-asset.create') }}" class="inline-flex items-center gap-2 bg-[#004A54] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#00363d] transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Tambah Asset
+                    </a>
+                </div>
             </div>
 
-            <div>
-                {{ $lines->links() }}
+            {{-- Filter & Cari --}}
+            <div class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
+                <form method="GET" action="{{ route('manage-asset') }}" class="w-full flex flex-row flex-wrap items-center gap-4">
+                    <div class="flex-1 min-w-[200px] relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h12M4 18h8" />
+                            </svg>
+                        </div>
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama jalur SUTT..."
+                            class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-9 pr-4 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] transition-colors">
+                    </div>
+                    <div class="shrink-0">
+                        <a href="{{ route('manage-asset') }}" class="border-2 border-[#004A54] dark:border-accent-400 text-[#004A54] dark:text-accent-400 px-5 py-2 rounded-lg text-sm font-bold hover:bg-cyan-50/50 dark:hover:bg-gray-700 transition-all block text-center tracking-wide">
+                            Reset
+                        </a>
+                    </div>
+                </form>
             </div>
+
+            {{-- ===================== TABLE SUTT ===================== --}}
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+
+                {{-- Header kolom disesuaikan dengan gambar --}}
+                <div class="grid grid-cols-7 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <div class="col-span-2">Nama Jalur</div>
+                    <div>Tegangan</div>
+                    <div>GI Awal</div>
+                    <div>GI Akhir</div>
+                    <div>Jumlah Tower</div>
+                    <div class="text-right">Panjang (km)</div>
+                </div>
+
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {{-- Ganti $assets dengan variabel data collection Anda di controller (misal: $lines / $suttLines / $assets) --}}
+                    @forelse ($assets ?? [] as $asset)
+                        <div class="grid grid-cols-7 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
+                            <div class="col-span-2 font-semibold text-[#004A54] dark:text-accent-400">
+                                <a href="{{ route('manage-asset.show', $asset->id ?? 1) }}" class="hover:underline">
+                                    {{ $asset->name ?? $asset->nama_jalur ?? '-' }}
+                                </a>
+                            </div>
+
+                            <div class="text-gray-600 dark:text-gray-300">
+                                <span class="px-2 py-1 text-xs font-semibold rounded bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300">
+                                    {{ $asset->voltage ?? $asset->tegangan ?? '-' }} kV
+                                </span>
+                            </div>
+
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ $asset->gi_awal ?? '-' }}
+                            </div>
+
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ $asset->gi_akhir ?? '-' }}
+                            </div>
+
+                            <div class="text-xs font-medium text-gray-700 dark:text-gray-200">
+                                {{ $asset->total_towers ?? $asset->jumlah_tower ?? 0 }} Tower
+                            </div>
+
+                            <div class="text-right text-xs font-semibold text-gray-800 dark:text-white">
+                                {{ $asset->length_km ?? $asset->panjang ?? '0.00' }} km
+                            </div>
+                        </div>
+                    @empty
+                        <div class="p-12 text-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800">
+                            <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            Belum ada data jalur SUTT. Import lewat "Import Data" atau tambahkan secara manual.
+                        </div>
+                    @endforelse
+                </div>
+
+                @if(isset($assets) && method_exists($assets, 'links'))
+                    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                            Menampilkan {{ $assets->firstItem() ?? 0 }} - {{ $assets->lastItem() ?? 0 }} dari {{ $assets->total() }} jalur SUTT
+                        </div>
+                        <div class="laravel-pagination">
+                            {{ $assets->links() }}
+                        </div>
+                    </div>
+                @endif
+            </div>
+
         </main>
     </div>
 </div>
 
 <script>
+    // Sidebar admin submenu toggle
     const adminMenuToggle = document.getElementById('adminMenuToggle');
     const adminSubmenu = document.getElementById('adminSubmenu');
     const adminMenuChevron = document.getElementById('adminMenuChevron');

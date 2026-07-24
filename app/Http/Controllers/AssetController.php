@@ -5,194 +5,267 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Unit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class AssetController extends Controller
 {
-    // ... method index(), destroy(), calculateKms() tetap sama seperti sebelumnya ...
-
     /**
-     * Daftar kemungkinan nama kolom di CSV untuk tiap field standar.
-     * Semua dicocokkan case-insensitive & abaikan spasi ekstra.
+     * Kandidat nama kolom (alias) per field, dipakai buat nebak mapping
+     * otomatis waktu CSV baru diupload. Perbandingan case-insensitive.
      */
     private const FIELD_ALIASES = [
-        'functloc' => ['functloc', 'kode', 'code', 'id aset', '#'],
-        'grup'     => ['grup', 'group', 'kategori', 'category', 'jenis'],
-        'induk'    => ['induk', 'upt', 'parent', 'induk unit', 'nama induk'],
-        'wil_kerja'=> ['wil. kerja', 'wil kerja', 'ultg', 'wilayah kerja'],
-        'nama'     => ['nama', 'name', 'nama aset', 'nama unit'],
-        'deskripsi'=> ['description', 'deskripsi', 'keterangan'],
-        'lat'      => ['lock lat', 'latitude', 'lat', 'y'],
-        'lng'      => ['lock lng', 'lock lon', 'longitude', 'lng', 'lon', 'x'],
-        'wkt'      => ['wkt', 'geometry', 'geom'],
+        'generic' => [
+            'name' => ['nama', 'name', 'nama_asset', 'nama aset'],
+            'category' => ['category', 'kategori', 'jenis'],
+            'code' => ['functloc', 'code', 'kode', 'no_tiang', 'no_tower'],
+            'gi_awal' => ['gi_awal', 'gardu_induk_awal', 'gi awal', 'from_gi', 'gi1'],
+            'gi_akhir' => ['gi_akhir', 'gardu_induk_akhir', 'gi akhir', 'to_gi', 'gi2'],
+            'latitude' => ['lock lat', 'lock_lat', 'latitude', 'lat'],
+            'longitude' => ['lock lng', 'lock_lng', 'longitude', 'lng'],
+        ],
     ];
 
-    public function importForm()
+    private const FIELD_LABELS = [
+        'name' => 'Nama Aset',
+        'category' => 'Kategori',
+        'code' => 'Kode / Functloc',
+        'gi_awal' => 'GI Awal',
+        'gi_akhir' => 'GI Akhir',
+        'latitude' => 'Latitude',
+        'longitude' => 'Longitude',
+    ];
+
+    public function index(Request $request)
+    {
+        $query = Asset::with(['giAwal', 'giAkhir'])->orderBy('name');
+
+        if ($category = $request->query('category')) {
+            $query->where('category', $category);
+        }
+
+        if ($search = $request->query('search')) {
+            $query->where('name', 'ILIKE', "%{$search}%");
+        }
+
+        $assets = $query->paginate(20)->withQueryString();
+
+        return view('manageAsset', compact('assets'));
+    }
+
+    public function create(Request $request)
     {
         $upts = Unit::where('level', 2)->orderBy('name')->get();
+        
+        // Mengambil data Gardu Induk langsung dari tabel units (Level 4 / type 'gi')
+        $garduInduks = Unit::where('level', 4)->orderBy('name')->get(); 
+        $asset = null;
 
-        return view('assetImport', compact('upts'));
+        return view('assetForm', compact('upts', 'garduInduks', 'asset'));
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $this->validateAsset($request);
+
+        Asset::create($validated);
+
+        return redirect()->route('manage-asset')->with('success', 'Aset berhasil ditambahkan.');
+    }
+
+    public function edit(Asset $asset)
+    {
+        $upts = Unit::where('level', 2)->orderBy('name')->get();
+        
+        // Mengambil data Gardu Induk dari tabel units
+        $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
+
+        return view('assetForm', compact('upts', 'garduInduks', 'asset'));
+    }
+
+    public function update(Request $request, Asset $asset)
+    {
+        $validated = $this->validateAsset($request, $asset->id);
+
+        $asset->update($validated);
+
+        return redirect()->route('manage-asset')->with('success', 'Aset berhasil diperbarui.');
+    }
+
+    public function destroy(Asset $asset)
+    {
+        $asset->delete();
+
+        return redirect()->route('manage-asset')->with('success', 'Aset berhasil dihapus.');
+    }
+
+    private function validateAsset(Request $request, ?int $ignoreId = null): array
+    {
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'string', 'max:50'],
+            'code' => ['nullable', 'string', 'max:50'],
+            // Validasi relasi ID mengarah ke tabel units, bukan assets lagi
+            'gi_awal_id' => ['nullable', 'exists:units,id'],
+            'gi_akhir_id' => ['nullable', 'exists:units,id'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+    }
+
+    // ===================== CSV IMPORT (1 langkah, auto-mapping) =====================
+
+public function importForm()
+    {
+        // Sumber dropdown GI untuk import juga diarahkan ke Unit
+        $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
+
+        return view('assetImport', compact('garduInduks'));
     }
 
     public function import(Request $request)
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt'],
-            'default_upt_id' => ['nullable', 'exists:units,id'],
-            'default_category' => ['nullable', 'in:sutt_30_70,sutt_150,sutt_500'],
+            'default_category' => ['nullable', 'string', 'max:50'],
         ]);
 
         $handle = fopen($request->file('file')->getRealPath(), 'r');
+        
         $rawHeader = fgetcsv($handle);
-        $header = array_map(fn ($h) => trim($h), $rawHeader);
+        if (!$rawHeader) {
+            return redirect()->back()->with('error', 'File CSV kosong atau format tidak valid.');
+        }
 
-        $colIndex = $this->resolveColumns($header);
+        $header = array_map(function($col) {
+            return strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $col)));
+        }, $rawHeader);
 
-        $defaultUpt = $request->filled('default_upt_id')
-            ? Unit::find($request->default_upt_id)
-            : null;
-        $defaultCategory = $request->input('default_category', 'sutt_150');
+        $aliases = self::FIELD_ALIASES['generic'];
+        $mapping = [];
+        foreach ($aliases as $field => $candidates) {
+            $mapping[$field] = $this->guessColumn($header, $candidates);
+        }
 
-        $imported = 0;
-        $skippedNoUpt = 0;
-        $skippedNoCoord = 0;
-        $skippedNoCategory = 0;
-        $missingUptNames = [];
+        $wktColumn = $this->guessColumn($header, ['wkt', 'geometry', 'geom']);
+        $descColumn = $this->guessColumn($header, ['description', 'deskripsi', 'keterangan']);
+        $defaultCategory = $request->input('default_category', 'umum');
 
+        $created = 0;
+        $skipped = 0;
+        $skippedReasons = [];
+
+        $rows = [];
         while (($row = fgetcsv($handle)) !== false) {
             if (count($row) < count($header)) continue;
+            $raw = array_combine($header, $row);
+            $mapped = $this->buildRowFromMapping($raw, $mapping);
+            $this->applyWktFallback($mapped, $raw, $wktColumn);
+            $this->applyNameFallback($mapped, $raw, $descColumn);
 
-            $get = fn (string $field) => isset($colIndex[$field]) ? trim($row[$colIndex[$field]] ?? '') : '';
-
-            $namaText = $get('nama') ?: $get('deskripsi');
-            $grupText = $get('grup');
-            $combinedText = trim($grupText.' '.$namaText.' '.$get('deskripsi'));
-
-            // ===== 1. Tentukan kategori =====
-            $category = $this->detectCategory($combinedText) ?? $defaultCategory;
-
-            if (! $category) {
-                $skippedNoCategory++;
-                continue;
+            // Resolusi relasi GI Awal & GI Akhir berdasarkan nama jika ada di CSV
+            $giAwalId = null;
+            if (!empty($mapped['gi_awal'])) {
+                $giAwal = Asset::where('category', 'gi')->where('name', 'ILIKE', $mapped['gi_awal'])->first();
+                $giAwalId = $giAwal ? $giAwal->id : null;
             }
 
-            // ===== 2. Tentukan UPT (parent) =====
-            $uptName = $get('induk');
-            $upt = null;
-
-            if ($uptName !== '') {
-                $upt = Unit::where('level', 2)->where('name', 'ILIKE', "%{$uptName}%")->first();
+            $giAkhirId = null;
+            if (!empty($mapped['gi_akhir'])) {
+                $giAkhir = Asset::where('category', 'gi')->where('name', 'ILIKE', $mapped['gi_akhir'])->first();
+                $giAkhirId = $giAkhir ? $giAkhir->id : null;
             }
 
-            if (! $upt) {
-                $upt = $defaultUpt;
-            }
-
-            if (! $upt) {
-                $skippedNoUpt++;
-                if ($uptName !== '') $missingUptNames[$uptName] = true;
-                continue;
-            }
-
-            // ===== 3. Koordinat: dari kolom lat/lng eksplisit, atau parse dari WKT =====
-            $lat = $get('lat');
-            $lng = $get('lng');
-
-            if (($lat === '' || $lng === '') && $get('wkt') !== '') {
-                [$parsedLng, $parsedLat] = $this->parseWkt($get('wkt'));
-                $lat = $lat ?: $parsedLat;
-                $lng = $lng ?: $parsedLng;
-            }
-
-            if (! is_numeric($lat) || ! is_numeric($lng)) {
-                $skippedNoCoord++;
-                continue;
-            }
-
-            // ===== 4. Functloc: pakai kolom asli, atau generate dari nama+koordinat kalau tidak ada =====
-            $functloc = $get('functloc') ?: ('AUTO-'.md5($namaText.$lat.$lng));
-
-            Asset::updateOrCreate(
-                ['functloc' => $functloc],
-                [
-                    'category' => $category,
-                    'grup_raw' => $grupText ?: $combinedText,
-                    'name' => $namaText ?: '(tanpa nama)',
-                    'upt_id' => $upt->id,
-                    'wil_kerja' => $get('wil_kerja') ?: null,
-                    'latitude' => $lat,
-                    'longitude' => $lng,
-                ]
-            );
-            $imported++;
+            $rows[] = [
+                'name' => $mapped['name'] ?? '',
+                'category' => $mapped['category'] ?: $defaultCategory,
+                'code' => $mapped['code'] ?: null,
+                'gi_awal_id' => $giAwalId,
+                'gi_akhir_id' => $giAkhirId,
+                'latitude' => $mapped['latitude'] ?? '',
+                'longitude' => $mapped['longitude'] ?? '',
+            ];
         }
         fclose($handle);
 
-        $message = "{$imported} baris berhasil diimpor.";
-        if ($skippedNoUpt > 0) {
-            $names = implode(', ', array_keys($missingUptNames));
-            $message .= " {$skippedNoUpt} baris dilewati karena UPT tidak ditemukan".($names ? " (\"{$names}\")" : '')." — pilih UPT tujuan default sebelum import kalau file tidak punya kolom Induk.";
-        }
-        if ($skippedNoCoord > 0) {
-            $message .= " {$skippedNoCoord} baris dilewati karena tidak ada koordinat yang valid.";
-        }
-        if ($skippedNoCategory > 0) {
-            $message .= " {$skippedNoCategory} baris dilewati karena kategori tidak terdeteksi.";
+        foreach ($rows as $row) {
+            $result = $this->processAssetRowDirect($row);
+            $result['status'] === 'failed' ? $skipped++ : $created++;
+            if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
         }
 
-        return redirect()->route('manage-asset')->with(
-            ($skippedNoUpt + $skippedNoCoord + $skippedNoCategory) > 0 ? 'error' : 'success',
-            $message
-        );
+        $message = "{$created} baris aset berhasil diimpor.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} baris dilewati.";
+        }
+
+        return redirect()->route('manage-asset.import')
+            ->with($skipped > 0 ? 'error' : 'success', $message)
+            ->with('import_skipped_reasons', $skippedReasons);
     }
 
-    /** Cocokkan header CSV ke field standar pakai daftar alias, tanpa perlu konfirmasi manual */
-    private function resolveColumns(array $header): array
+    private function applyWktFallback(array &$mapped, array $raw, ?string $wktColumn): void
     {
-        $normalized = array_map(fn ($h) => strtolower(trim($h)), $header);
-        $result = [];
+        if (($mapped['latitude'] ?? '') !== '' && ($mapped['longitude'] ?? '') !== '') {
+            return;
+        }
+        if (! $wktColumn || empty($raw[$wktColumn])) {
+            return;
+        }
+        if (preg_match('/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i', $raw[$wktColumn], $m)) {
+            $mapped['longitude'] = $mapped['longitude'] ?: $m[1];
+            $mapped['latitude'] = $mapped['latitude'] ?: $m[2];
+        }
+    }
 
-        foreach (self::FIELD_ALIASES as $field => $aliases) {
-            foreach ($aliases as $alias) {
-                $idx = array_search($alias, $normalized, true);
-                if ($idx !== false) {
-                    $result[$field] = $idx;
-                    break;
+    private function applyNameFallback(array &$mapped, array $raw, ?string $descColumn): void
+    {
+        if (($mapped['name'] ?? '') !== '') {
+            return;
+        }
+        if ($descColumn && ! empty($raw[$descColumn])) {
+            $mapped['name'] = trim($raw[$descColumn]);
+        }
+    }
+
+    private function guessColumn(array $header, array $candidates): ?string
+    {
+        foreach ($header as $col) {
+            $cleanCol = strtolower(trim($col));
+            foreach ($candidates as $candidate) {
+                if ($cleanCol === strtolower(trim($candidate))) {
+                    return $col;
                 }
             }
         }
-
-        return $result;
-    }
-
-    /** Tebak kategori aset dari teks gabungan (Grup + Nama + Deskripsi) */
-    private function detectCategory(string $text): ?string
-    {
-        $t = strtoupper($text);
-
-        if (str_contains($t, 'GARDU INDUK') || preg_match('/\bGI\b/', $t) || str_contains($t, 'GITET') || str_contains($t, 'GIS')) {
-            return 'gi';
-        }
-
-        if (str_contains($t, 'TOWER') || str_contains($t, 'SUTT')) {
-            if (preg_match('/(\d+)\s*KV/', $t, $m)) {
-                $kv = (int) $m[1];
-                if ($kv >= 500) return 'sutt_500';
-                if ($kv >= 150) return 'sutt_150';
-                return 'sutt_30_70';
-            }
-            return null; // ketemu "tower/sutt" tapi kV-nya nggak ketauan → nanti fallback ke default_category
-        }
-
         return null;
     }
 
-    /** Parse "POINT (lng lat)" jadi [lng, lat] */
-    private function parseWkt(string $wkt): array
+    private function buildRowFromMapping(array $raw, array $mapping): array
     {
-        if (preg_match('/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i', $wkt, $m)) {
-            return [$m[1], $m[2]]; // [lng, lat]
+        $mapped = [];
+        foreach ($mapping as $field => $colName) {
+            $mapped[$field] = $colName && isset($raw[$colName]) ? trim($raw[$colName]) : null;
         }
-        return [null, null];
+        return $mapped;
+    }
+
+    private function processAssetRowDirect(array $row): array
+    {
+        if (empty($row['name'])) {
+            return ['status' => 'failed', 'alasan' => 'Nama aset kosong'];
+        }
+
+        Asset::updateOrCreate(
+            ['name' => $row['name'], 'category' => $row['category']],
+            [
+                'code' => $row['code'] ?? null,
+                'gi_awal_id' => $row['gi_awal_id'] ?? null,
+                'gi_akhir_id' => $row['gi_akhir_id'] ?? null,
+                'latitude' => !empty($row['latitude']) ? (float) $row['latitude'] : null,
+                'longitude' => !empty($row['longitude']) ? (float) $row['longitude'] : null,
+            ]
+        );
+
+        return ['status' => 'success'];
     }
 }

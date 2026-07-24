@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Import Unit — PLN Financial'])
+@extends('layouts.app', ['title' => 'Import Asset SUTT — PLN Financial'])
 
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
@@ -109,7 +109,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="m20 20-3.5-3.5" />
                     </svg>
                 </span>
-                <input type="text" placeholder="Cari unit atau data..."
+                <input type="text" placeholder="Cari asset atau data..."
                     class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-10 pr-3 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-pln-700 focus:bg-white dark:focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pln-700/20">
             </div>
 
@@ -139,14 +139,14 @@
 
             {{-- Breadcrumb --}}
             <nav class="flex items-center gap-1.5 text-sm">
-                <a href="{{ route('manage-unit') }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">Manage Unit</a>
+                <a href="{{ route('manage-asset') }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">Manage Asset</a>
                 <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
-                <span class="font-semibold text-gray-700 dark:text-gray-200">Import Unit</span>
+                <span class="font-semibold text-gray-700 dark:text-gray-200">Import Asset SUTT</span>
             </nav>
 
-            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Import Unit dari CSV</h1>
+            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Import Jalur SUTT dari CSV</h1>
 
             @if (session('success'))
                 <div class="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-4 py-3 text-sm text-green-700 dark:text-green-400">
@@ -157,17 +157,6 @@
             @if (session('error'))
                 <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                     {{ session('error') }}
-                </div>
-            @endif
-
-            @if (session('import_skipped_reasons') && count(session('import_skipped_reasons')) > 0)
-                <div class="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
-                    <p class="font-semibold mb-1.5">Detail baris yang dilewati:</p>
-                    <ul class="list-disc list-inside space-y-1 max-h-64 overflow-y-auto">
-                        @foreach (session('import_skipped_reasons') as $reason)
-                            <li>{{ $reason }}</li>
-                        @endforeach
-                    </ul>
                 </div>
             @endif
 
@@ -187,46 +176,26 @@
                         </svg>
                     </div>
                     <div>
-                        <h2 class="text-base font-bold text-pln-800 dark:text-white">Upload File CSV</h2>
-                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah data unit secara massal menggunakan format CSV di bawah ini.</p>
+                        <h2 class="text-base font-bold text-pln-800 dark:text-white">Upload File CSV SUTT</h2>
+                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah data Jalur SUTT (Nama Jalur, Tegangan, GI Awal, GI Akhir, Jumlah Tower, Panjang Jalur) secara massal.</p>
                     </div>
                 </div>
 
                 <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-5">
 
-                    <form action="{{ route('manage-unit.import') }}" method="POST" enctype="multipart/form-data">
+                    <form action="{{ route('manage-asset.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
-
-                        <!-- Pilihan Jenis Data -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-semibold mb-1">Jenis Data</label>
-                            <select name="jenis" class="w-full border rounded-lg p-2 text-sm">
-                                <option value="generic">Generic (UIT, UPT, ULTG)</option>
-                                <option value="gi" selected>Gardu Induk (GI) & Tower</option>
-                            </select>
-                        </div>
-
-                        <!-- Pilihan Default UPT (Digunakan jika CSV tidak punya kolom Induk) -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-semibold mb-1 text-gray-700">Default UPT Induk (Opsional)</label>
-                            <select name="default_upt_id" class="w-full border rounded-lg p-2 text-sm bg-white">
-                                <option value="">-- Pilih UPT Default jika CSV tidak ada kolom Induk --</option>
-                                @foreach($upts as $upt)
-                                    <option value="{{ $upt->id }}">{{ $upt->name }}</option>
-                                @endforeach
-                            </select>
-                            <p class="text-xs text-gray-500 mt-1">Jika kolom "Induk" ada di dalam CSV, sistem akan mengutamakan data dari CSV.</p>
-                        </div>
 
                         <!-- Upload File CSV -->
                         <div class="mb-6">
-                            <label class="block text-sm font-semibold mb-1 text-gray-700">File CSV</label>
-                            <input type="file" name="file" accept=".csv,.txt" class="w-full border rounded-lg p-2 text-sm bg-white" required>
+                            <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">File CSV</label>
+                            <input type="file" name="file" accept=".csv,.txt" class="w-full border rounded-lg p-2 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                            <p class="text-xs text-gray-500 mt-1">Pastikan kolom CSV sesuai dengan format: Nama Jalur, Tegangan, GI Awal, GI Akhir, Jumlah Tower, Panjang Jalur (km).</p>
                         </div>
 
-                        <!-- Tombol Aksi (Tombol "Lanjut" sudah dihapus, hanya menyisakan Batal dan Proses Import) -->
-                        <div class="flex items-center justify-end gap-3 border-t pt-4">
-                            <a href="{{ route('manage-unit') }}" class="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Batal</a>
+                        <!-- Tombol Aksi -->
+                        <div class="flex items-center justify-end gap-3 border-t pt-4 border-gray-100 dark:border-gray-700">
+                            <a href="{{ route('manage-asset') }}" class="px-4 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Batal</a>
                             <button type="submit" class="bg-[#004A54] hover:bg-[#003840] text-white px-5 py-2 rounded-lg text-sm font-medium">
                                 Proses Import
                             </button>

@@ -237,7 +237,7 @@
                                     {{ $unit->level == 2 ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300' : '' }}
                                     {{ $unit->level == 3 ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300' : '' }}
                                     {{ $unit->level == 4 ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' : '' }}">
-                                    {{ $unit->levelLabel() }}
+                                    Level {{ $unit->level }}
                                 </span>
                             </div>
 

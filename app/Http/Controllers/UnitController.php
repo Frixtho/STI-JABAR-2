@@ -2,14 +2,52 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Unit;
 use App\Models\SuttLine;
 use App\Models\SuttTower;
+use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class UnitController extends Controller
 {
+    /**
+     * Kandidat nama kolom (alias) per field, dipakai buat nebak mapping
+     * otomatis waktu CSV baru diupload. Perbandingan case-insensitive.
+     */
+    private const FIELD_ALIASES = [
+        'generic' => [
+            'name' => ['name', 'nama', 'nama_unit', 'nama unit'],
+            'level' => ['level', 'lvl'],
+            'code' => ['code', 'kode', 'functloc'],
+            'parent_name' => ['parent_name', 'induk', 'parent', 'nama_induk', 'upt_induk'],
+            'latitude' => ['latitude', 'lat', 'lock lat', 'lock_lat'],
+            'longitude' => ['longitude', 'lng', 'long', 'lock lng', 'lock_lng'],
+        ],
+        'gi' => [
+            'grup' => ['grup', 'group', 'tipe', 'jenis'],
+            'name' => ['nama', 'name', 'nama_gi', 'nama_tower'],
+            'code' => ['functloc', 'kode', 'code'],
+            'parent_name' => ['induk', 'parent_name', 'upt_induk', 'nama_line', 'line'],
+            'latitude' => ['lock lat', 'lock_lat', 'latitude', 'lat'],
+            'longitude' => ['lock lng', 'lock_lng', 'longitude', 'lng'],
+        ],
+    ];
+
+    private const FIELD_LABELS = [
+        'name' => 'Nama',
+        'level' => 'Level (1-4)',
+        'code' => 'Kode / Functloc',
+        'parent_name' => 'Nama Induk (Parent)',
+        'latitude' => 'Latitude',
+        'longitude' => 'Longitude',
+        'grup' => 'Grup (pembeda Gardu Induk vs Tower)',
+    ];
+
+    private const REQUIRED_FIELDS = [
+        'generic' => ['name', 'level'],
+        'gi' => ['name'],
+    ];
+
     public function index(Request $request)
     {
         $query = Unit::with('parent')->orderBy('level')->orderBy('name');
@@ -102,68 +140,87 @@ class UnitController extends Controller
         return $validated;
     }
 
-    // ===================== CSV IMPORT =====================
+    // ===================== CSV IMPORT (1 langkah, auto-mapping) =====================
 
     public function importForm()
     {
-        return view('unitImport');
+        $upts = Unit::where('level', 2)->orderBy('name')->get();
+
+        return view('unitImport', compact('upts'));
     }
 
+    /**
+     * Terima file + jenis data (+ opsional UPT default kalau CSV tidak
+     * punya kolom Induk), langsung deteksi kolom otomatis via alias,
+     * lalu proses import — tanpa step konfirmasi manual mapping.
+     */
     public function import(Request $request)
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt'],
+            'jenis' => ['required', 'in:generic,gi'],
+            'default_upt_id' => ['nullable', 'exists:units,id'],
         ]);
 
         $handle = fopen($request->file('file')->getRealPath(), 'r');
         $header = array_map('trim', fgetcsv($handle));
 
-        // Deteksi format dari header baris pertama.
-        // Format A (umum, semua level): level,name,code,parent_name,latitude,longitude
-        // Format B (export SAP/aset PLN): WKT,#,Functloc,Grup,Induk,Wil. Kerja,Nama,Lock Lat,Lock Lng
-        //   Format B punya 2 jenis baris, dibedakan lewat kolom Grup:
-        //     - "GARDU INDUK" -> jadi Unit level 4 (GI), Induk = nama UPT
-        //     - "TOWER"       -> jadi SuttTower, Induk = nama jalur SUTT
-        $isGiFormat = in_array('Functloc', $header) && in_array('Induk', $header) && in_array('Nama', $header);
-        $isGenericFormat = in_array('level', $header) && in_array('name', $header) && in_array('parent_name', $header);
+        $jenis = $request->input('jenis');
+        $aliases = self::FIELD_ALIASES[$jenis];
 
-        if (! $isGiFormat && ! $isGenericFormat) {
-            fclose($handle);
-            return back()->with('error', 'Header CSV tidak dikenali. Gunakan salah satu format kolom yang sudah ditentukan.');
+        $mapping = [];
+        foreach ($aliases as $field => $candidates) {
+            $mapping[$field] = $this->guessColumn($header, $candidates);
         }
+
+        // Kolom WKT dipakai sebagai fallback kalau latitude/longitude
+        // tidak ada kolom terpisah (format "POINT (lng lat)")
+        $wktColumn = $this->guessColumn($header, ['wkt', 'geometry', 'geom']);
+
+        // Kolom deskripsi dipakai sebagai fallback nama kalau kolom "name"
+        // ada di header tapi datanya kosong / nama sebenarnya ada di sini
+        $descColumn = $this->guessColumn($header, ['description', 'deskripsi', 'keterangan']);
+
+        $defaultUpt = $request->filled('default_upt_id') ? Unit::find($request->default_upt_id) : null;
 
         $created = 0;
         $skipped = 0;
         $skippedReasons = [];
 
-        if ($isGiFormat) {
+        if ($jenis === 'gi') {
             $giRows = [];
             $towerRows = [];
 
             while (($row = fgetcsv($handle)) !== false) {
                 if (count($row) < count($header)) continue;
                 $raw = array_combine($header, $row);
-                $grup = strtoupper(trim($raw['Grup'] ?? ''));
+                $mapped = $this->buildRowFromMapping($raw, $mapping);
+                $this->applyWktFallback($mapped, $raw, $wktColumn);
+                $this->applyNameFallback($mapped, $raw, $descColumn);
 
-                if ($grup === 'TOWER') {
-                    $towerRows[] = $raw;
+                if (strtoupper($mapped['grup'] ?? '') === 'TOWER') {
+                    $towerRows[] = $mapped;
                 } else {
-                    // Default-kan ke GI kalau Grup-nya "GARDU INDUK" atau semacamnya
-                    $giRows[] = $this->normalizeGiRow($raw);
+                    $giRows[] = [
+                        'name' => $mapped['name'] ?? '',
+                        'level' => 4,
+                        'code' => $mapped['code'] ?: null,
+                        'parent_name' => $mapped['parent_name'] ?: ($defaultUpt->name ?? ''),
+                        'parent_level' => 2,
+                        'latitude' => $mapped['latitude'] ?? '',
+                        'longitude' => $mapped['longitude'] ?? '',
+                    ];
                 }
             }
             fclose($handle);
 
-            // proses GI dulu, biar towers bisa nyambung ke GI yang baru dibikin
-            usort($giRows, fn ($a, $b) => (int) $a['level'] <=> (int) $b['level']);
             foreach ($giRows as $row) {
                 $result = $this->processGenericUnitRow($row);
                 $result['status'] === 'failed' ? $skipped++ : $created++;
                 if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
             }
-
-            foreach ($towerRows as $raw) {
-                $result = $this->processTowerRow($raw);
+            foreach ($towerRows as $mapped) {
+                $result = $this->processTowerRowNormalized($mapped);
                 $result['status'] === 'failed' ? $skipped++ : $created++;
                 if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
             }
@@ -172,7 +229,19 @@ class UnitController extends Controller
             while (($row = fgetcsv($handle)) !== false) {
                 if (count($row) < count($header)) continue;
                 $raw = array_combine($header, $row);
-                $rows[] = $this->normalizeGenericRow($raw);
+                $mapped = $this->buildRowFromMapping($raw, $mapping);
+                $this->applyWktFallback($mapped, $raw, $wktColumn);
+                $this->applyNameFallback($mapped, $raw, $descColumn);
+
+                $rows[] = [
+                    'name' => $mapped['name'] ?? '',
+                    'level' => (int) ($mapped['level'] ?? 0),
+                    'code' => $mapped['code'] ?: null,
+                    'parent_name' => $mapped['parent_name'] ?: ($defaultUpt->name ?? ''),
+                    'parent_level' => null,
+                    'latitude' => $mapped['latitude'] ?? '',
+                    'longitude' => $mapped['longitude'] ?? '',
+                ];
             }
             fclose($handle);
 
@@ -189,197 +258,34 @@ class UnitController extends Controller
             $message .= " {$skipped} baris dilewati (lihat detail).";
         }
 
-        return back()
+        return redirect()->route('manage-unit.import')
             ->with($skipped > 0 ? 'error' : 'success', $message)
             ->with('import_skipped_reasons', $skippedReasons);
     }
 
-    /**
-     * Proses satu baris unit (hasil normalisasi dari format umum ATAU baris GI
-     * dari format SAP) jadi record Unit. Parent dicari dari parent_name (+
-     * dipersempit ke parent_level kalau ada).
-     */
-    private function processGenericUnitRow(array $row): array
+    /** Kalau lat/lng kosong tapi ada kolom WKT "POINT (lng lat)", parse dari situ. */
+    private function applyWktFallback(array &$mapped, array $raw, ?string $wktColumn): void
     {
-        $parent = null;
-
-        if (! empty($row['parent_name'])) {
-            $parentQuery = Unit::where('name', 'ILIKE', trim($row['parent_name']));
-
-            if (! empty($row['parent_level'])) {
-                $parentQuery->where('level', $row['parent_level']);
-            }
-
-            $parent = $parentQuery->first();
-
-            // Kalau induknya belum ada, otomatis dibikinin (bukan di-skip).
-            // Level induk dipakai dari parent_level kalau diketahui (misal
-            // format GI selalu UPT/level 2), atau ditebak sebagai
-            // level unit ini dikurangi 1.
-            if (! $parent) {
-                $parentLevel = $row['parent_level'] ?? max(1, (int) $row['level'] - 1);
-
-                $parent = Unit::create([
-                    'name' => trim($row['parent_name']),
-                    'level' => $parentLevel,
-                    'type' => match ($parentLevel) {
-                        1 => 'uit', 2 => 'upt', 3 => 'ultg', 4 => 'gi', default => 'gi',
-                    },
-                    'parent_id' => null, // induknya sendiri (misal UIT) belum diketahui, bisa diisi manual belakangan
-                ]);
-            }
+        if (($mapped['latitude'] ?? '') !== '' && ($mapped['longitude'] ?? '') !== '') {
+            return;
         }
-
-        Unit::updateOrCreate(
-            ['name' => trim($row['name']), 'level' => (int) $row['level']],
-            [
-                'code' => $row['code'] ?? null,
-                'type' => match ((int) $row['level']) {
-                    1 => 'uit', 2 => 'upt', 3 => 'ultg', 4 => 'gi', default => 'gi',
-                },
-                'parent_id' => $parent?->id,
-                'latitude' => ($row['latitude'] ?? '') !== '' ? $row['latitude'] : null,
-                'longitude' => ($row['longitude'] ?? '') !== '' ? $row['longitude'] : null,
-            ]
-        );
-
-        return ['status' => 'created'];
-    }
-
-    /**
-     * Proses satu baris TOWER (Grup=TOWER) jadi SuttTower, sekaligus
-     * bikin/pakai SuttLine yang sesuai. Line & GI endpoint dideteksi dari
-     * pola Functloc: TRS-3512-{kodeA}.{kodeB}-T{nomor}
-     */
-    private function processTowerRow(array $raw): array
-    {
-        $functloc = trim($raw['Functloc'] ?? '');
-        $induk = trim($raw['Induk'] ?? ''); // nama line, misal "TRS 70kV UJUNGBERUNG-SUMEDANG"
-        $nama = trim($raw['Nama'] ?? '');
-        $lat = trim($raw['Lock Lat'] ?? '');
-        $lng = trim($raw['Lock Lng'] ?? '');
-
-        $parsed = $this->parseTowerFunctloc($functloc);
-
-        if (! $parsed || $induk === '' || $lat === '' || $lng === '') {
-            return ['status' => 'failed', 'alasan' => "Tower \"{$nama}\": Functloc tidak sesuai pola atau data koordinat kosong"];
+        if (! $wktColumn || empty($raw[$wktColumn])) {
+            return;
         }
-
-        $codePair = "{$parsed['code_a']}.{$parsed['code_b']}";
-
-        $line = SuttLine::firstOrCreate(
-            ['name' => $induk, 'code_pair' => $codePair],
-            [
-                'voltage' => $this->extractVoltageFromLineName($induk),
-                'gi_start_id' => $this->findGiByFunctlocCode($parsed['code_a'])?->id,
-                'gi_end_id' => $this->findGiByFunctlocCode($parsed['code_b'])?->id,
-            ]
-        );
-
-        SuttTower::updateOrCreate(
-            ['sutt_line_id' => $line->id, 'tower_number' => $parsed['tower_number']],
-            [
-                'functloc' => $functloc,
-                'name' => $nama,
-                'latitude' => $lat,
-                'longitude' => $lng,
-            ]
-        );
-
-        return ['status' => 'created'];
-    }
-
-    /**
-     * Parsing Functloc tower, format: TRS-3512-{kodeA}.{kodeB}-T{nomor}
-     * Contoh: TRS-3512-254.229-T0049 -> kodeA=254, kodeB=229, nomor=49
-     */
-    private function parseTowerFunctloc(string $functloc): ?array
-    {
-        if (! preg_match('/-(\d+)\.(\d+)-T(\d+)$/', $functloc, $m)) {
-            return null;
+        if (preg_match('/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i', $raw[$wktColumn], $m)) {
+            $mapped['longitude'] = $mapped['longitude'] ?: $m[1];
+            $mapped['latitude'] = $mapped['latitude'] ?: $m[2];
         }
-
-        return [
-            'code_a' => $m[1],
-            'code_b' => $m[2],
-            'tower_number' => (int) $m[3],
-        ];
     }
 
-    /**
-     * Cari GI (level 4) yang kode Functloc-nya cocok, misal kode "254"
-     * dicari lewat pola "...-254.254" di kolom code milik GI tersebut.
-     */
-    private function findGiByFunctlocCode(string $code): ?Unit
+    /** Kalau kolom "name" hasil mapping kosong, coba ambil dari kolom deskripsi. */
+    private function applyNameFallback(array &$mapped, array $raw, ?string $descColumn): void
     {
-        return Unit::where('level', 4)
-            ->where('code', 'LIKE', "%-{$code}.{$code}")
-            ->first();
-    }
-
-    private function extractVoltageFromLineName(string $lineName): ?string
-    {
-        return preg_match('/(\d+\s?kV)/i', $lineName, $m) ? $m[1] : null;
-    }
-
-    /**
-     * Normalisasi baris format umum (level,name,code,parent_name,latitude,longitude)
-     * ke struktur baris standar yang dipakai proses import.
-     */
-    private function normalizeGenericRow(array $raw): array
-    {
-        return [
-            'name' => trim($raw['name'] ?? ''),
-            'level' => (int) ($raw['level'] ?? 0),
-            'code' => trim($raw['code'] ?? '') ?: null,
-            'parent_name' => trim($raw['parent_name'] ?? ''),
-            'parent_level' => null, // parent bisa level berapa aja, gak dibatasi
-            'latitude' => trim($raw['latitude'] ?? ''),
-            'longitude' => trim($raw['longitude'] ?? ''),
-        ];
-    }
-
-    /**
-     * Normalisasi baris format export GI dari SAP
-     * (WKT,#,Functloc,Grup,Induk,Wil. Kerja,Nama,Lock Lat,Lock Lng)
-     * ke struktur baris standar yang dipakai proses import.
-     */
-    private function normalizeGiRow(array $raw): array
-    {
-        return [
-            'name' => trim($raw['Nama'] ?? ''),
-            'level' => 4, // format ini khusus dipakai buat GI
-            'code' => trim($raw['Functloc'] ?? '') ?: null,
-            'parent_name' => trim($raw['Induk'] ?? ''),
-            'parent_level' => 2, // kolom "Induk" di format ini selalu nama UPT
-            'latitude' => trim($raw['Lock Lat'] ?? ''),
-            'longitude' => trim($raw['Lock Lng'] ?? ''),
-        ];
-    }
-
-    // ===================== HITUNG JARAK (KMS) =====================
-
-    /** Hitung jarak dari sebuah unit (biasanya GI) ke UPT Bandung */
-    public function distanceToBandung(Unit $unit)
-    {
-        $bandung = Unit::where('type', 'upt')
-            ->where('name', 'ILIKE', '%bandung%')
-            ->first();
-
-        if (! $bandung) {
-            return response()->json(['error' => 'Unit "UPT Bandung" belum ada di database. Tambahkan dulu koordinatnya.'], 404);
+        if (($mapped['name'] ?? '') !== '') {
+            return;
         }
-
-        $distance = $unit->distanceToKm($bandung);
-
-        if ($distance === null) {
-            return response()->json(['error' => 'Koordinat (latitude/longitude) belum lengkap pada salah satu unit.'], 422);
+        if ($descColumn && ! empty($raw[$descColumn])) {
+            $mapped['name'] = trim($raw[$descColumn]);
         }
-
-        return response()->json([
-            'from' => $unit->name,
-            'to' => $bandung->name,
-            'distance_km' => $distance,
-        ]);
     }
 }

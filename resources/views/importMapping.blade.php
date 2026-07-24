@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Import Unit — PLN Financial'])
+@extends('layouts.app', ['title' => 'Cocokkan Kolom — PLN Financial'])
 
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
@@ -143,86 +143,84 @@
                 <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
-                <span class="font-semibold text-gray-700 dark:text-gray-200">Import Unit</span>
+                <a href="{{ route('manage-unit.import') }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">Import Unit</a>
+                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+                <span class="font-semibold text-gray-700 dark:text-gray-200">Cocokkan Kolom</span>
             </nav>
 
-            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Import Unit dari CSV</h1>
-
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-                    {{ session('error') }}
-                </div>
-            @endif
-
-            @if (session('import_skipped_reasons') && count(session('import_skipped_reasons')) > 0)
-                <div class="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
-                    <p class="font-semibold mb-1.5">Detail baris yang dilewati:</p>
-                    <ul class="list-disc list-inside space-y-1 max-h-64 overflow-y-auto">
-                        @foreach (session('import_skipped_reasons') as $reason)
-                            <li>{{ $reason }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-                    {{ $errors->first() }}
-                </div>
-            @endif
+            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Cocokkan Kolom CSV</h1>
+            <p class="text-sm text-gray-500 dark:text-gray-400 -mt-3">Pilih kolom di file lo yang sesuai untuk tiap field. Tebakan otomatis udah dipilihin, tinggal koreksi kalau salah.</p>
 
             <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
 
-                {{-- Card Header --}}
-                <div class="flex items-start gap-4 p-8 pb-6">
-                    <div class="w-11 h-11 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-base font-bold text-pln-800 dark:text-white">Upload File CSV</h2>
-                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah data unit secara massal menggunakan format CSV di bawah ini.</p>
-                    </div>
-                </div>
+                <div class="border-t-0 p-8 space-y-6">
 
-                <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-5">
+                    {{-- Preview beberapa baris pertama --}}
+                    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                        <table class="min-w-full text-xs">
+                            <thead class="bg-gray-50 dark:bg-gray-700/50">
+                                <tr>
+                                    @foreach ($header as $col)
+                                        <th class="px-3 py-2 text-left font-bold text-gray-600 dark:text-gray-300 whitespace-nowrap">{{ $col }}</th>
+                                    @endforeach
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                                @foreach ($sampleRows as $sampleRow)
+                                    <tr>
+                                        @foreach ($sampleRow as $cell)
+                                            <td class="px-3 py-2 text-gray-500 dark:text-gray-400 whitespace-nowrap">{{ $cell }}</td>
+                                        @endforeach
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
 
-                    <form id="importForm" method="POST" action="{{ route('manage-unit.import') }}" enctype="multipart/form-data" class="space-y-5">
+                    <form method="POST" action="{{ route('manage-unit.import.confirm') }}" class="space-y-5">
                         @csrf
+                        <input type="hidden" name="stored_path" value="{{ $storedPath }}">
+                        <input type="hidden" name="jenis" value="{{ $jenis }}">
 
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Jenis Data</label>
-                            <select name="jenis" required
-                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
-                                <option value="generic">Unit umum (UIT / UPT / ULTG / GI)</option>
-                                <option value="gi">Gardu Induk & Tower (export SAP/aset)</option>
-                            </select>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            @foreach ($fields as $field)
+                                <div>
+                                    <label class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ $fieldLabels[$field] ?? $field }}</label>
+                                    <select name="mapping[{{ $field }}]"
+                                        class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]"
+                                        {{ in_array($field, $requiredFields) ? 'required' : '' }}>
+                                        <option value="">— Tidak ada —</option>
+                                        @foreach ($header as $col)
+                                            <option value="{{ $col }}" @selected($guessedMapping[$field] === $col)>{{ $col }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endforeach
                         </div>
 
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">File CSV</label>
-                            <input type="file" name="file" accept=".csv,.txt" required
-                                class="mt-1.5 w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#004A54]/10 file:text-[#004A54] dark:file:bg-accent-400/10 dark:file:text-accent-400 hover:file:bg-[#004A54]/20">
-                            <p class="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500"></p>
+                        <div class="flex items-start gap-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-900/40 px-4 py-3">
+                            <svg class="w-4 h-4 text-cyan-600 dark:text-cyan-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <circle cx="12" cy="12" r="9" stroke-linecap="round" stroke-linejoin="round" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8h.01M11 12h1v4h1" />
+                            </svg>
+                            <p class="text-xs text-cyan-800 dark:text-cyan-300">
+                                @if ($jenis === 'gi')
+                                    Kolom "Grup" dipakai buat bedain baris Gardu Induk (jadi Unit) dan baris Tower (jadi bagian jalur SUTT).
+                                @else
+                                    Kolom "Level" harus berisi angka 1-4 (UIT/UPT/ULTG/GI) di tiap baris.
+                                @endif
+                            </p>
+                        </div>
+
+                        <div class="flex justify-end gap-3 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <a href="{{ route('manage-unit.import') }}" class="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Batal</a>
+                            <button type="submit" class="inline-flex items-center gap-2 bg-[#004A54] text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-[#00363d] transition-colors">
+                                Proses Import
+                            </button>
                         </div>
                     </form>
-                </div>
-
-                <div class="flex justify-end gap-3 px-8 py-5 border-t border-gray-100 dark:border-gray-700">
-                    <a href="{{ route('manage-unit') }}" class="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Batal</a>
-                    <button type="submit" form="importForm" class="inline-flex items-center gap-2 bg-[#004A54] text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-[#00363d] transition-colors">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                        Lanjut
-                    </button>
                 </div>
             </div>
         </main>

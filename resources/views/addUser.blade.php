@@ -45,7 +45,10 @@
                        class="relative block px-2 py-2 text-sm {{ request()->routeIs('manage-unit*') ? 'text-white font-medium before:absolute before:-left-[13px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-accent-400 before:rounded-r' : 'text-pln-100 hover:text-white' }}">
                         Manage Unit
                     </a>
-                     <a href="{{ route('manage-asset') }}" class="...">Manage Asset</a>
+                    <a href="{{ route('manage-asset') }}"
+                       class="relative block px-2 py-2 text-sm {{ request()->routeIs('manage-asset*') ? 'text-white font-medium before:absolute before:-left-[13px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-accent-400 before:rounded-r' : 'text-pln-100 hover:text-white' }}">
+                        Manage Asset
+                    </a>
                 </div>
             </div>
 

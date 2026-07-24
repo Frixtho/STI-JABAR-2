@@ -52,7 +52,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('manage-unit/import', [UnitController::class, 'importForm'])->name('manage-unit.import.form');
     Route::post('manage-unit/import', [UnitController::class, 'import'])->name('manage-unit.import');
-
+    
     Route::get('manage-unit/{unit}/distance-bandung', [UnitController::class, 'distanceToBandung'])->name('manage-unit.distance');
 
     //Manage Asset
@@ -61,4 +61,6 @@ Route::middleware('auth')->group(function () {
     Route::get('manage-asset/import', [AssetController::class, 'importForm'])->name('manage-asset.import.form');
     Route::post('manage-asset/import', [AssetController::class, 'import'])->name('manage-asset.import');
     Route::get('manage-asset/{gi}/kms', [AssetController::class, 'calculateKms'])->name('manage-asset.kms');
+    Route::get('/manage-asset', [AssetController::class, 'index'])->name('manage-asset');
+    Route::get('/manage-asset/{suttLine}', [AssetController::class, 'show'])->name('manage-asset.show');
 });

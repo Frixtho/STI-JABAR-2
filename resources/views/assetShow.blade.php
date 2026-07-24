@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Import Unit — PLN Financial'])
+@extends('layouts.app', ['title' => $line->name.' — PLN Financial'])
 
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
@@ -139,91 +139,61 @@
 
             {{-- Breadcrumb --}}
             <nav class="flex items-center gap-1.5 text-sm">
-                <a href="{{ route('manage-unit') }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">Manage Unit</a>
+                <a href="{{ route('manage-asset') }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">Manage Asset</a>
                 <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
-                <span class="font-semibold text-gray-700 dark:text-gray-200">Import Unit</span>
+                <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $line->name }}</span>
             </nav>
 
-            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Import Unit dari CSV</h1>
+            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">{{ $line->name }}</h1>
 
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-                    {{ session('success') }}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Tegangan</p>
+                    <p class="text-lg font-bold text-pln-800 dark:text-white">{{ $line->voltage ?? '—' }}</p>
                 </div>
-            @endif
-
-            @if (session('error'))
-                <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-                    {{ session('error') }}
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                    <p class="text-xs text-gray-400 dark:text-gray-500">GI Awal → Akhir</p>
+                    <p class="text-sm font-bold text-pln-800 dark:text-white">{{ $line->giStart->name ?? '—' }} → {{ $line->giEnd->name ?? '—' }}</p>
                 </div>
-            @endif
-
-            @if (session('import_skipped_reasons') && count(session('import_skipped_reasons')) > 0)
-                <div class="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
-                    <p class="font-semibold mb-1.5">Detail baris yang dilewati:</p>
-                    <ul class="list-disc list-inside space-y-1 max-h-64 overflow-y-auto">
-                        @foreach (session('import_skipped_reasons') as $reason)
-                            <li>{{ $reason }}</li>
-                        @endforeach
-                    </ul>
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Jumlah Tower</p>
+                    <p class="text-lg font-bold text-pln-800 dark:text-white">{{ $line->towers->count() }}</p>
                 </div>
-            @endif
-
-            @if ($errors->any())
-                <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-                    {{ $errors->first() }}
+                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
+                    <p class="text-xs text-gray-400 dark:text-gray-500">Panjang Jalur (menyusuri tower)</p>
+                    <p class="text-lg font-bold text-pln-800 dark:text-white">{{ $pathLengthKm !== null ? number_format($pathLengthKm, 3).' km' : '—' }}</p>
                 </div>
-            @endif
+            </div>
 
-            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-
-                {{-- Card Header --}}
-                <div class="flex items-start gap-4 p-8 pb-6">
-                    <div class="w-11 h-11 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
-                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
-                        </svg>
-                    </div>
-                    <div>
-                        <h2 class="text-base font-bold text-pln-800 dark:text-white">Upload File CSV</h2>
-                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah data unit secara massal menggunakan format CSV di bawah ini.</p>
-                    </div>
-                </div>
-
-                <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-5">
-
-                    <form id="importForm" method="POST" action="{{ route('manage-unit.import') }}" enctype="multipart/form-data" class="space-y-5">
-                        @csrf
-
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Jenis Data</label>
-                            <select name="jenis" required
-                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
-                                <option value="generic">Unit umum (UIT / UPT / ULTG / GI)</option>
-                                <option value="gi">Gardu Induk & Tower (export SAP/aset)</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">File CSV</label>
-                            <input type="file" name="file" accept=".csv,.txt" required
-                                class="mt-1.5 w-full text-sm text-gray-600 dark:text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[#004A54]/10 file:text-[#004A54] dark:file:bg-accent-400/10 dark:file:text-accent-400 hover:file:bg-[#004A54]/20">
-                            <p class="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500"></p>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="flex justify-end gap-3 px-8 py-5 border-t border-gray-100 dark:border-gray-700">
-                    <a href="{{ route('manage-unit') }}" class="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Batal</a>
-                    <button type="submit" form="importForm" class="inline-flex items-center gap-2 bg-[#004A54] text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-[#00363d] transition-colors">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                        Lanjut
-                    </button>
-                </div>
+            <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50 dark:bg-gray-700/50">
+                        <tr>
+                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Urutan (T)</th>
+                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Nama</th>
+                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Functloc</th>
+                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Latitude</th>
+                            <th class="px-5 py-3 text-left font-bold text-gray-600 dark:text-gray-300">Longitude</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
+                        @forelse ($line->towers as $tower)
+                            <tr>
+                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $tower->tower_number }}</td>
+                                <td class="px-5 py-3 font-medium text-gray-800 dark:text-white">{{ $tower->name }}</td>
+                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $tower->functloc }}</td>
+                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $tower->latitude }}</td>
+                                <td class="px-5 py-3 text-gray-500 dark:text-gray-400">{{ $tower->longitude }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-5 py-8 text-center text-gray-400 dark:text-gray-500">Belum ada tower di jalur ini.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </main>
     </div>

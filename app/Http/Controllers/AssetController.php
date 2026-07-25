@@ -16,7 +16,7 @@ class AssetController extends Controller
     private const FIELD_ALIASES = [
         'generic' => [
             'name' => ['nama', 'name', 'nama_asset', 'nama aset'],
-            'category' => ['category', 'kategori', 'jenis'],
+            'category' => ['category', 'kategori', 'jenis', 'grup', 'group'],
             'code' => ['functloc', 'code', 'kode', 'no_tiang', 'no_tower'],
             'gi_awal' => ['gi_awal', 'gardu_induk_awal', 'gi awal', 'from_gi', 'gi1'],
             'gi_akhir' => ['gi_akhir', 'gardu_induk_akhir', 'gi akhir', 'to_gi', 'gi2'],
@@ -258,7 +258,7 @@ public function importForm()
         Asset::updateOrCreate(
             ['name' => $row['name'], 'category' => $row['category']],
             [
-                'code' => $row['code'] ?? null,
+                'functloc' => $row['code'] ?? null,
                 'gi_awal_id' => $row['gi_awal_id'] ?? null,
                 'gi_akhir_id' => $row['gi_akhir_id'] ?? null,
                 'latitude' => !empty($row['latitude']) ? (float) $row['latitude'] : null,

@@ -160,6 +160,17 @@
                 </div>
             @endif
 
+            @if (session('import_skipped_reasons') && count(session('import_skipped_reasons')) > 0)
+                <div class="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-xs text-amber-800 dark:text-amber-300">
+                    <p class="font-semibold mb-1.5">Detail baris yang dilewati:</p>
+                    <ul class="list-disc list-inside space-y-1 max-h-64 overflow-y-auto">
+                        @foreach (session('import_skipped_reasons') as $reason)
+                            <li>{{ $reason }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             @if ($errors->any())
                 <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                     {{ $errors->first() }}
@@ -189,8 +200,8 @@
                         <!-- Upload File CSV -->
                         <div class="mb-6">
                             <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">File CSV</label>
-                            <input type="file" name="file" accept=".csv,.txt" class="w-full border rounded-lg p-2 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
-                            <p class="text-xs text-gray-500 mt-1">Pastikan kolom CSV sesuai dengan format: Nama Jalur, Tegangan, GI Awal, GI Akhir, Jumlah Tower, Panjang Jalur (km).</p>
+                            <input type="file" name="files[]" accept=".csv,.txt" multiple class="w-full border rounded-lg p-2 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
+                            <p class="text-xs text-gray-500 mt-1">Bisa pilih banyak file sekaligus (Ctrl/Cmd+klik). Pastikan kolom CSV sesuai dengan format: Nama Jalur, Tegangan, GI Awal, GI Akhir, Jumlah Tower, Panjang Jalur (km).</p>
                         </div>
 
                         <!-- Tombol Aksi -->

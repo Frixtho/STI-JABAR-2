@@ -22,6 +22,7 @@ class AssetController extends Controller
             'gi_akhir' => ['gi_akhir', 'gardu_induk_akhir', 'gi akhir', 'to_gi', 'gi2'],
             'latitude' => ['lock lat', 'lock_lat', 'latitude', 'lat'],
             'longitude' => ['lock lng', 'lock_lng', 'longitude', 'lng'],
+            'wil_kerja' => ['wil. kerja', 'wil kerja', 'wilayah kerja', 'wil_kerja'],
         ],
     ];
 
@@ -55,9 +56,9 @@ class AssetController extends Controller
     public function create(Request $request)
     {
         $upts = Unit::where('level', 2)->orderBy('name')->get();
-        
+
         // Mengambil data Gardu Induk langsung dari tabel units (Level 4 / type 'gi')
-        $garduInduks = Unit::where('level', 4)->orderBy('name')->get(); 
+        $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
         $asset = null;
 
         return view('assetForm', compact('upts', 'garduInduks', 'asset'));
@@ -75,7 +76,7 @@ class AssetController extends Controller
     public function edit(Asset $asset)
     {
         $upts = Unit::where('level', 2)->orderBy('name')->get();
-        
+
         // Mengambil data Gardu Induk dari tabel units
         $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
 
@@ -112,9 +113,9 @@ class AssetController extends Controller
         ]);
     }
 
-    // ===================== CSV IMPORT (1 langkah, auto-mapping) =====================
+    // ===================== CSV IMPORT (bulk, auto-mapping per file) =====================
 
-public function importForm()
+    public function importForm()
     {
         // Sumber dropdown GI untuk import juga diarahkan ke Unit
         $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
@@ -125,18 +126,50 @@ public function importForm()
     public function import(Request $request)
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt'],
+            'files' => ['required', 'array', 'min:1'],
+            'files.*' => ['file', 'mimes:csv,txt'],
             'default_category' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        
-        $rawHeader = fgetcsv($handle);
-        if (!$rawHeader) {
-            return redirect()->back()->with('error', 'File CSV kosong atau format tidak valid.');
+        $defaultCategory = $request->input('default_category', 'umum');
+
+        $totalCreated = 0;
+        $totalSkipped = 0;
+        $allSkippedReasons = [];
+
+        foreach ($request->file('files') as $file) {
+            [$created, $skipped, $skippedReasons] = $this->importSingleAssetFile($file, $defaultCategory);
+            $totalCreated += $created;
+            $totalSkipped += $skipped;
+            foreach ($skippedReasons as $reason) {
+                $allSkippedReasons[] = "[{$file->getClientOriginalName()}] {$reason}";
+            }
         }
 
-        $header = array_map(function($col) {
+        $jumlahFile = count($request->file('files'));
+        $message = "{$totalCreated} baris aset berhasil diimpor dari {$jumlahFile} file.";
+        if ($totalSkipped > 0) {
+            $message .= " {$totalSkipped} baris dilewati.";
+        }
+
+        return redirect()->route('manage-asset.import')
+            ->with($totalSkipped > 0 ? 'error' : 'success', $message)
+            ->with('import_skipped_reasons', $allSkippedReasons);
+    }
+
+    /**
+     * Proses satu file CSV aset, return [jumlah_dibuat, jumlah_dilewati, alasan_dilewati[]].
+     */
+    private function importSingleAssetFile($file, string $defaultCategory): array
+    {
+        $handle = fopen($file->getRealPath(), 'r');
+
+        $rawHeader = fgetcsv($handle);
+        if (!$rawHeader) {
+            return [0, 0, ['File CSV kosong atau format tidak valid.']];
+        }
+
+        $header = array_map(function ($col) {
             return strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $col)));
         }, $rawHeader);
 
@@ -148,21 +181,19 @@ public function importForm()
 
         $wktColumn = $this->guessColumn($header, ['wkt', 'geometry', 'geom']);
         $descColumn = $this->guessColumn($header, ['description', 'deskripsi', 'keterangan']);
-        $defaultCategory = $request->input('default_category', 'umum');
-
-        $created = 0;
-        $skipped = 0;
-        $skippedReasons = [];
 
         $rows = [];
+        $rowNumber = 1;
         while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) < count($header)) continue;
-            $raw = array_combine($header, $row);
+            $rowNumber++;
+            $raw = $this->safeCombineRow($header, $row);
+            if ($raw === null) {
+                continue; // baris benar-benar kosong
+            }
             $mapped = $this->buildRowFromMapping($raw, $mapping);
             $this->applyWktFallback($mapped, $raw, $wktColumn);
             $this->applyNameFallback($mapped, $raw, $descColumn);
 
-            // Resolusi relasi GI Awal & GI Akhir berdasarkan nama jika ada di CSV
             $giAwalId = null;
             if (!empty($mapped['gi_awal'])) {
                 $giAwal = Asset::where('category', 'gi')->where('name', 'ILIKE', $mapped['gi_awal'])->first();
@@ -175,17 +206,32 @@ public function importForm()
                 $giAkhirId = $giAkhir ? $giAkhir->id : null;
             }
 
+            $uptId = null;
+            if (!empty($mapped['wil_kerja'])) {
+                $giForUpt = Unit::where('level', 4)
+                    ->where('name', 'ILIKE', trim($mapped['wil_kerja']))
+                    ->first();
+                $uptId = $giForUpt?->parent_id;
+            }
+
             $rows[] = [
                 'name' => $mapped['name'] ?? '',
                 'category' => $mapped['category'] ?: $defaultCategory,
+                'grup_raw' => $mapped['category'] ?: null,
                 'code' => $mapped['code'] ?: null,
                 'gi_awal_id' => $giAwalId,
                 'gi_akhir_id' => $giAkhirId,
+                'upt_id' => $uptId,
+                'wil_kerja' => $mapped['wil_kerja'] ?: null,
                 'latitude' => $mapped['latitude'] ?? '',
                 'longitude' => $mapped['longitude'] ?? '',
             ];
         }
         fclose($handle);
+
+        $created = 0;
+        $skipped = 0;
+        $skippedReasons = [];
 
         foreach ($rows as $row) {
             $result = $this->processAssetRowDirect($row);
@@ -193,14 +239,7 @@ public function importForm()
             if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
         }
 
-        $message = "{$created} baris aset berhasil diimpor.";
-        if ($skipped > 0) {
-            $message .= " {$skipped} baris dilewati.";
-        }
-
-        return redirect()->route('manage-asset.import')
-            ->with($skipped > 0 ? 'error' : 'success', $message)
-            ->with('import_skipped_reasons', $skippedReasons);
+        return [$created, $skipped, $skippedReasons];
     }
 
     private function applyWktFallback(array &$mapped, array $raw, ?string $wktColumn): void
@@ -225,6 +264,31 @@ public function importForm()
         if ($descColumn && ! empty($raw[$descColumn])) {
             $mapped['name'] = trim($raw[$descColumn]);
         }
+    }
+
+    /**
+     * array_combine() versi aman: kalau jumlah kolom baris beda dari header
+     * (lebih dikit atau lebih banyak, biasanya karena ada koma tak ter-quote
+     * di salah satu isi kolom), tetap dipaksa cocok alih-alih error/skip.
+     * Kelebihan kolom dipotong, kekurangan diisi string kosong.
+     */
+    private function safeCombineRow(array $header, array $row): ?array
+    {
+        // baris kosong (fgetcsv kadang balikin [null] untuk baris blank di akhir file)
+        if (count($row) === 1 && $row[0] === null) {
+            return null;
+        }
+
+        $headerCount = count($header);
+        $rowCount = count($row);
+
+        if ($rowCount > $headerCount) {
+            $row = array_slice($row, 0, $headerCount);
+        } elseif ($rowCount < $headerCount) {
+            $row = array_pad($row, $headerCount, '');
+        }
+
+        return array_combine($header, $row);
     }
 
     private function guessColumn(array $header, array $candidates): ?string
@@ -259,8 +323,11 @@ public function importForm()
             ['name' => $row['name'], 'category' => $row['category']],
             [
                 'functloc' => $row['code'] ?? null,
+                'grup_raw' => $row['grup_raw'] ?? null,
                 'gi_awal_id' => $row['gi_awal_id'] ?? null,
                 'gi_akhir_id' => $row['gi_akhir_id'] ?? null,
+                'upt_id' => $row['upt_id'] ?? null,
+                'wil_kerja' => $row['wil_kerja'] ?? null,
                 'latitude' => !empty($row['latitude']) ? (float) $row['latitude'] : null,
                 'longitude' => !empty($row['longitude']) ? (float) $row['longitude'] : null,
             ]

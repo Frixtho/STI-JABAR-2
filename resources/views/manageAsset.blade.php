@@ -261,7 +261,7 @@
                             Menampilkan {{ $assets->firstItem() ?? 0 }} - {{ $assets->lastItem() ?? 0 }} dari {{ $assets->total() }} jalur SUTT
                         </div>
                         <div class="laravel-pagination">
-                            {{ $assets->links() }}
+                            {{ $assets->onEachSide(-1)->links() }}
                         </div>
                     </div>
                 @endif

@@ -293,7 +293,7 @@
                         Menampilkan {{ $units->firstItem() ?? 0 }} - {{ $units->lastItem() ?? 0 }} dari {{ $units->total() }} unit
                     </div>
                     <div class="laravel-pagination">
-                        {{ $units->links() }}
+                        {{ $units->onEachSide(-1)->links() }}
                     </div>
                 </div>
             </div>

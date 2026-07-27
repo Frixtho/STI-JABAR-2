@@ -55,7 +55,7 @@
             <a href="{{ route('settings') }}"
                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium {{ request()->routeIs('settings*') ? 'bg-white/10 text-white' : 'text-pln-100 hover:bg-white/5' }}">
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 .255c-.007.378.138.751.43.991l1.005.828c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.751-.43-.991l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.281Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 .255c-.007.378.138.751.43.991l1.005.828c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.751-.43-.991l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l-.214-1.281Z" />
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                 </svg>
                 Settings
@@ -188,7 +188,7 @@
                     </div>
                     <div>
                         <h2 class="text-base font-bold text-pln-800 dark:text-white">Upload File CSV</h2>
-                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah data unit secara massal menggunakan format CSV di bawah ini.</p>
+                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah beberapa data unit secara massal sekaligus menggunakan format CSV.</p>
                     </div>
                 </div>
 
@@ -199,36 +199,50 @@
 
                         <!-- Pilihan Jenis Data -->
                         <div class="mb-4">
-                            <label class="block text-sm font-semibold mb-1">Jenis Data</label>
-                            <select name="jenis" class="w-full border rounded-lg p-2 text-sm">
+                            <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">Jenis Data</label>
+                            <select name="jenis" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-[#004A54] focus:outline-none">
                                 <option value="generic">Generic (UIT, UPT, ULTG)</option>
                                 <option value="gi" selected>Gardu Induk (GI) & Tower</option>
                             </select>
                         </div>
 
-                        <!-- Pilihan Default UPT (Digunakan jika CSV tidak punya kolom Induk) -->
-                        <div class="mb-4">
-                            <label class="block text-sm font-semibold mb-1 text-gray-700">Default UPT Induk (Opsional)</label>
-                            <select name="default_upt_id" class="w-full border rounded-lg p-2 text-sm bg-white">
-                                <option value="">-- Pilih UPT Default jika CSV tidak ada kolom Induk --</option>
-                                @foreach($upts as $upt)
-                                    <option value="{{ $upt->id }}">{{ $upt->name }}</option>
-                                @endforeach
-                            </select>
-                            <p class="text-xs text-gray-500 mt-1">Jika kolom "Induk" ada di dalam CSV, sistem akan mengutamakan data dari CSV.</p>
-                        </div>
-
-                        <!-- Upload File CSV -->
+                        <!-- Upload Multiple File CSV -->
                         <div class="mb-6">
-                            <label class="block text-sm font-semibold mb-1 text-gray-700">File CSV</label>
-                            <input type="file" name="file" accept=".csv,.txt" class="w-full border rounded-lg p-2 text-sm bg-white" required>
+                            <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">File CSV (Bisa pilih lebih dari satu)</label>
+                            <input type="file" name="files[]" id="fileInput" accept=".csv,.txt" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#004A54] file:text-white hover:file:bg-[#003840] cursor-pointer" multiple required>
+                            <p class="text-xs text-gray-400 mt-1">Tekan dan tahan tombol Ctrl (Windows) atau Cmd (Mac) di keyboard untuk memilih banyak file sekaligus.</p>
+                            
+                            {{-- Container untuk menampilkan daftar file yang terpilih secara dinamis --}}
+                            <div id="fileListContainer" class="hidden mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300">
+                                <p class="font-semibold mb-1 text-[#004A54] dark:text-accent-400">File yang dipilih (<span id="fileCount">0</span> file):</p>
+                                <ul id="fileNamesList" class="list-disc list-inside space-y-0.5"></ul>
+                            </div>
                         </div>
 
-                        <!-- Tombol Aksi (Tombol "Lanjut" sudah dihapus, hanya menyisakan Batal dan Proses Import) -->
-                        <div class="flex items-center justify-end gap-3 border-t pt-4">
-                            <a href="{{ route('manage-unit') }}" class="px-4 py-2 border rounded-lg text-sm text-gray-600 hover:bg-gray-50">Batal</a>
-                            <button type="submit" class="bg-[#004A54] hover:bg-[#003840] text-white px-5 py-2 rounded-lg text-sm font-medium">
-                                Proses Import
+                        <!-- Pilihan Default UPT Induk per File (Selalu Muncul) -->
+                        <div class="mb-6 space-y-3">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200">Default UPT Induk per File (Opsional)</label>
+                            <p class="text-xs text-gray-400 dark:text-gray-400">Jika file CSV tidak memiliki kolom Induk, Anda bisa tentukan UPT default khusus untuk masing-masing file di bawah ini.</p>
+                            
+                            <div id="dynamicUptContainer" class="space-y-2">
+                                <div class="flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs">
+                                    <div class="truncate font-medium text-gray-400 italic max-w-[50%]">
+                                        Belum ada file dipilih
+                                    </div>
+                                    <div class="w-1/2">
+                                        <select disabled class="w-full border border-gray-300 dark:border-gray-600 rounded-md p-1.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed">
+                                            <option>-- Pilih UPT Default (Opsional) --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tombol Aksi -->
+                        <div class="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+                            <a href="{{ route('manage-unit') }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Batal</a>
+                            <button type="submit" class="bg-[#004A54] hover:bg-[#003840] text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+                                Proses Import Semua
                             </button>
                         </div>
                     </form>
@@ -247,6 +261,103 @@
         adminMenuToggle.addEventListener('click', () => {
             adminSubmenu.classList.toggle('hidden');
             adminMenuChevron.classList.toggle('rotate-180');
+        });
+    }
+
+    // Data UPT dari Backend
+    const uptOptions = [
+        @foreach($upts as $upt)
+            { id: "{{ $upt->id }}", name: "{{ $upt->name }}" },
+        @endforeach
+    ];
+
+    const fileInput = document.getElementById('fileInput');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const fileNamesList = document.getElementById('fileNamesList');
+    const fileCount = document.getElementById('fileCount');
+    const dynamicUptContainer = document.getElementById('dynamicUptContainer');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            fileNamesList.innerHTML = '';
+            dynamicUptContainer.innerHTML = '';
+            const files = e.target.files;
+            
+            if (files.length > 0) {
+                fileListContainer.classList.remove('hidden');
+                fileCount.textContent = files.length;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const fileName = files[i].name;
+
+                    // 1. Preview nama file
+                    const li = document.createElement('li');
+                    li.textContent = fileName;
+                    fileNamesList.appendChild(li);
+
+                    // 2. Card Select UPT per File
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs';
+
+                    const labelDiv = document.createElement('div');
+                    labelDiv.className = 'truncate font-medium text-gray-700 dark:text-gray-200 max-w-[50%]';
+                    labelDiv.textContent = '📄 ' + fileName;
+                    labelDiv.title = fileName;
+
+                    const selectDiv = document.createElement('div');
+                    selectDiv.className = 'w-1/2';
+
+                    const select = document.createElement('select');
+                    select.name = 'default_upt_id[]';
+                    select.className = 'w-full border border-gray-300 dark:border-gray-600 rounded-md p-1.5 text-xs bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:ring-2 focus:ring-[#004A54]';
+
+                    // Opsi default kosong
+                    const defaultOpt = document.createElement('option');
+                    defaultOpt.value = '';
+                    defaultOpt.textContent = '-- Pilih UPT Default (Opsional) --';
+                    select.appendChild(defaultOpt);
+
+                    // Masukkan opsi UPT
+                    uptOptions.forEach(upt => {
+                        const opt = document.createElement('option');
+                        opt.value = upt.id;
+                        opt.textContent = upt.name;
+                        select.appendChild(opt);
+                    });
+
+                    selectDiv.appendChild(select);
+                    wrapper.appendChild(labelDiv);
+                    wrapper.appendChild(selectDiv);
+
+                    dynamicUptContainer.appendChild(wrapper);
+                }
+            } else {
+                fileListContainer.classList.add('hidden');
+                
+                // Tampilkan kembali placeholder kosong jika file dihapus/tidak dipilih
+                const wrapper = document.createElement('div');
+                wrapper.className = 'flex items-center justify-between gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs';
+
+                const labelDiv = document.createElement('div');
+                labelDiv.className = 'truncate font-medium text-gray-400 italic max-w-[50%]';
+                labelDiv.textContent = 'Belum ada file dipilih';
+
+                const selectDiv = document.createElement('div');
+                selectDiv.className = 'w-1/2';
+
+                const select = document.createElement('select');
+                select.disabled = true;
+                select.className = 'w-full border border-gray-300 dark:border-gray-600 rounded-md p-1.5 text-xs bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed';
+                
+                const opt = document.createElement('option');
+                opt.textContent = '-- Pilih UPT Default (Opsional) --';
+                select.appendChild(opt);
+
+                selectDiv.appendChild(select);
+                wrapper.appendChild(labelDiv);
+                wrapper.appendChild(selectDiv);
+                dynamicUptContainer.appendChild(wrapper);
+            }
         });
     }
 </script>

@@ -203,7 +203,7 @@
             {{-- ===================== TABLE SUTT ===================== --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
-                {{-- Header kolom disesuaikan dengan gambar --}}
+                {{-- Header kolom --}}
                 <div class="grid grid-cols-7 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     <div class="col-span-2">Nama Jalur</div>
                     <div>Tegangan</div>
@@ -214,7 +214,6 @@
                 </div>
 
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                    {{-- Ganti $assets dengan variabel data collection Anda di controller (misal: $lines / $suttLines / $assets) --}}
                     @forelse ($assets ?? [] as $asset)
                         <div class="grid grid-cols-7 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
                             <div class="col-span-2 font-semibold text-[#004A54] dark:text-accent-400">
@@ -230,19 +229,19 @@
                             </div>
 
                             <div class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ $asset->gi_awal ?? '-' }}
+                                {{ $asset->giAwal->name ?? $asset->giStart->name ?? $asset->gi_awal ?? '-' }}
                             </div>
 
                             <div class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ $asset->gi_akhir ?? '-' }}
+                                {{ $asset->giAkhir->name ?? $asset->giEnd->name ?? $asset->gi_akhir ?? '-' }}
                             </div>
 
                             <div class="text-xs font-medium text-gray-700 dark:text-gray-200">
-                                {{ $asset->total_towers ?? $asset->jumlah_tower ?? 0 }} Tower
+                                {{ $asset->jumlah_tower ?? optional($asset->towers)->count() ?? 0 }}
                             </div>
 
                             <div class="text-right text-xs font-semibold text-gray-800 dark:text-white">
-                                {{ $asset->length_km ?? $asset->panjang ?? '0.00' }} km
+                                {{ isset($asset->panjang_km) ? number_format($asset->panjang_km, 2, ',', '.') : (isset($asset->length_km) ? number_format($asset->length_km, 2, ',', '.') : '0,00') }} km
                             </div>
                         </div>
                     @empty

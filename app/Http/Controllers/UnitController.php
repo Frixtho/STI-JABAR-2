@@ -16,7 +16,9 @@ class UnitController extends Controller
      */
     private const FIELD_ALIASES = [
         'generic' => [
-            'name' => ['nama', 'name', 'nama_unit', 'nama unit'],
+            'name' => ['nama', 'name', 'nama_unit', 'nama unit', 'gi', 'gardu_induk'],
+            'upt' => ['upt', 'unit pelaksana transmisi'],
+            'ultg' => ['ultg', 'unit layanan transmisi dan gardu induk'],
             'level' => ['level', 'lvl'],
             'code' => ['functloc', 'code', 'kode'],
             'parent_name' => ['induk', 'parent_name', 'upt_induk', 'wil. kerja', 'wil_kerja'],
@@ -25,13 +27,17 @@ class UnitController extends Controller
         ],
         'gi' => [
             'grup' => ['grup', 'group', 'tipe', 'jenis'],
-            'name' => ['nama', 'name', 'nama_gi', 'nama_tower'],
+            'name' => ['nama', 'name', 'nama_gi', 'nama_tower', 'gi'], // <-- Tambahkan 'gi' di sini
             'code' => ['functloc', 'kode', 'code'],
-            'parent_name' => ['induk', 'parent_name', 'upt_induk', 'wil. kerja', 'wil_kerja', 'line'],
-            'latitude' => ['lock lat', 'lock_lat', 'latitude', 'lat'],
-            'longitude' => ['lock lng', 'lock_lng', 'longitude', 'lng'],
+            'upt' => ['upt', 'unit pelaksana transmisi'], // <-- Tambahkan mapping kolom UPT
+            'ultg' => ['ultg', 'unit layanan transmisi dan gardu induk'],
+            'parent_name' => ['induk', 'parent_name', 'upt_induk', 'wil. kerja', 'wil_kerja', 'line', 'ultg', 'upt'], // <-- Ditambahkan juga ultg/upt sebagai parent
+            'latitude' => ['lock lat', 'lock_lat', 'latitude', 'lat'], // <-- Menangkap kolom 'lat'
+            'longitude' => ['lock lng', 'lock_lng', 'longitude', 'lng'], // <-- Menangkap kolom 'lng'
         ],
     ];
+
+    
 
     private const FIELD_LABELS = [
         'name' => 'Nama',
@@ -144,12 +150,11 @@ class UnitController extends Controller
 
     public function importForm()
     {
-        // Mengambil data UPT (Level 2) untuk mengisi dropdown pilihan induk
-        $upts = Unit::where('level', 2)->orderBy('name')->get();
+        $upts = \App\Models\Unit::where('level', 2)->orderBy('name')->get();
 
+        // Ubah dari 'unit.import' menjadi 'manage-unit.import'
         return view('unitImport', compact('upts'));
     }
-
     /**
      * Terima file + jenis data (+ opsional UPT default kalau CSV tidak
      * punya kolom Induk), langsung deteksi kolom otomatis via alias,
@@ -158,140 +163,199 @@ class UnitController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt'],
+            'files' => ['required', 'array'],
+            'files.*' => ['file', 'mimes:csv,txt'],
             'jenis' => ['required', 'in:generic,gi'],
-            'default_upt_id' => ['nullable', 'exists:units,id'],
+            'default_upt_id' => ['nullable', 'array'],
+            'default_upt_id.*' => ['nullable', 'exists:units,id'], // Tambahkan nullable di sini
         ]);
-
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        
-        // Membersihkan BOM UTF-8 dan spasi pada header
-        $rawHeader = fgetcsv($handle);
-        if (!$rawHeader) {
-            return redirect()->back()->with('error', 'File CSV kosong atau format tidak valid.');
-        }
-
-        $header = array_map(function($col) {
-            return strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $col)));
-        }, $rawHeader);
 
         $jenis = $request->input('jenis');
         $aliases = self::FIELD_ALIASES[$jenis];
+        
+        // Ambil array dari pilihan default UPT
+        $defaultUptIds = $request->input('default_upt_id', []);
 
-        $mapping = [];
-        foreach ($aliases as $field => $candidates) {
-            $mapping[$field] = $this->guessColumn($header, $candidates);
-        }
+        $totalCreated = 0;
+        $totalSkipped = 0;
+        $allSkippedReasons = [];
 
-        // Kolom WKT dipakai sebagai fallback kalau latitude/longitude tidak ada kolom terpisah
-        $wktColumn = $this->guessColumn($header, ['wkt', 'geometry', 'geom']);
+        // Looping setiap file yang di-upload
+        foreach ($request->file('files') as $index => $uploadedFile) {
+            $path = $uploadedFile->getRealPath();
+            
+            // Tentukan UPT default untuk file ke-index ini (jika ada pilihannya)
+            $currentDefaultUptId = $defaultUptIds[$index] ?? ($defaultUptIds[0] ?? null);
+            $defaultUpt = $currentDefaultUptId ? Unit::find($currentDefaultUptId) : null;
 
-        // Kolom deskripsi dipakai sebagai fallback nama kalau kolom "name" kosong
-        $descColumn = $this->guessColumn($header, ['description', 'deskripsi', 'keterangan']);
+            $fileLines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            if (empty($fileLines)) {
+                continue;
+            }
 
-        // Mengambil objek UPT default berdasarkan ID angka yang dipilih dari form
-        $defaultUpt = $request->filled('default_upt_id') ? Unit::find($request->default_upt_id) : null;
+            $rawHeaderData = str_getcsv(array_shift($fileLines));
+            $header = array_map(function($col) {
+                return strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $col)));
+            }, $rawHeaderData);
 
-        $created = 0;
-        $skipped = 0;
-        $skippedReasons = [];
+            $mapping = [];
+            foreach ($aliases as $field => $candidates) {
+                $mapping[$field] = $this->guessColumn($header, $candidates);
+            }
 
-        if ($jenis === 'gi') {
-            $giRows = [];
-            $towerRows = [];
+            $wktColumn = $this->guessColumn($header, ['wkt', 'geometry', 'geom']);
+            $descColumn = $this->guessColumn($header, ['description', 'deskripsi', 'keterangan']);
 
-            while (($row = fgetcsv($handle)) !== false) {
-                if (count($row) < count($header)) continue;
-                $raw = array_combine($header, $row);
-                $mapped = $this->buildRowFromMapping($raw, $mapping);
-                $this->applyWktFallback($mapped, $raw, $wktColumn);
-                $this->applyNameFallback($mapped, $raw, $descColumn);
+            $created = 0;
+            $skipped = 0;
+            $skippedReasons = [];
 
-                if (strtoupper($mapped['grup'] ?? '') === 'TOWER') {
-                    $towerRows[] = $mapped;
-                } else {
-                    // Menentukan parent_id: Prioritas dari teks kolom CSV, jika kosong gunakan ID default_upt_id dari form
+            if ($jenis === 'gi') {
+                $rowsToProcess = [];
+
+                foreach ($fileLines as $line) {
+                    $row = str_getcsv($line);
+                    if (count($row) < count($header)) continue;
+                    
+                    $row = array_pad($row, count($header), null);
+                    $raw = array_combine($header, $row);
+                    
+                    $mapped = $this->buildRowFromMapping($raw, $mapping);
+                    $this->applyWktFallback($mapped, $raw, $wktColumn);
+                    $this->applyNameFallback($mapped, $raw, $descColumn);
+
+                    $uptName = null;
+                    foreach (['upt', 'unit pelaksana transmisi', 'induk', 'upt_induk', 'wil. kerja'] as $key) {
+                        if (!empty($raw[$key] ?? null)) {
+                            $uptName = trim($raw[$key]);
+                            break;
+                        }
+                    }
+
+                    $ultgName = null;
+                    foreach (['ultg', 'unit layanan transmisi dan gardu induk'] as $key) {
+                        if (!empty($raw[$key] ?? null)) {
+                            $ultgName = trim($raw[$key]);
+                            break;
+                        }
+                    }
+
+                    $rowsToProcess[] = [
+                        'upt_name' => $uptName,
+                        'ultg_name' => $ultgName,
+                        'gi_name' => $mapped['name'] ?? null,
+                        'code' => $mapped['code'] ?: null,
+                        'grup' => $mapped['grup'] ?? null,
+                        'latitude' => isset($mapped['latitude']) ? str_replace(',', '.', $mapped['latitude']) : null,
+                        'longitude' => isset($mapped['longitude']) ? str_replace(',', '.', $mapped['longitude']) : null,
+                    ];
+                }
+
+                foreach ($rowsToProcess as $data) {
+                    $uptId = null;
+                    if (!empty($data['upt_name'])) {
+                        $uptUnit = Unit::firstOrCreate(
+                            ['name' => $data['upt_name'], 'level' => 2],
+                            ['type' => 'upt']
+                        );
+                        $uptId = $uptUnit->id;
+                    } else if ($defaultUpt) {
+                        $uptId = $defaultUpt->id;
+                    }
+
+                    $ultgId = null;
+                    if (!empty($data['ultg_name'])) {
+                        $ultgUnit = Unit::firstOrCreate(
+                            ['name' => $data['ultg_name'], 'level' => 3],
+                            [
+                                'parent_id' => $uptId,
+                                'type' => 'ultg'
+                            ]
+                        );
+                        if (!$ultgUnit->parent_id && $uptId) {
+                            $ultgUnit->update(['parent_id' => $uptId]);
+                        }
+                        $ultgId = $ultgUnit->id;
+                    }
+
+                    $finalParentId = $ultgId ?? $uptId;
+
+                    if (empty($data['gi_name'])) {
+                        $skipped++;
+                        $skippedReasons[] = 'Nama unit/GI kosong pada salah satu baris.';
+                        continue;
+                    }
+
+                    if (strtoupper($data['grup'] ?? '') === 'TOWER') {
+                        $created++;
+                    } else {
+                        Unit::updateOrCreate(
+                            ['name' => $data['gi_name'], 'level' => 4],
+                            [
+                                'code' => $data['code'],
+                                'parent_id' => $finalParentId,
+                                'latitude' => !empty($data['latitude']) ? (float) $data['latitude'] : null,
+                                'longitude' => !empty($data['longitude']) ? (float) $data['longitude'] : null,
+                                'type' => 'gi',
+                            ]
+                        );
+                        $created++;
+                    }
+                }
+            } else {
+                $rows = [];
+                foreach ($fileLines as $line) {
+                    $row = str_getcsv($line);
+                    if (count($row) < count($header)) continue;
+                    
+                    $row = array_pad($row, count($header), null);
+                    $raw = array_combine($header, $row);
+                    
+                    $mapped = $this->buildRowFromMapping($raw, $mapping);
+                    $this->applyWktFallback($mapped, $raw, $wktColumn);
+                    $this->applyNameFallback($mapped, $raw, $descColumn);
+
                     $parentId = null;
                     if (!empty($mapped['parent_name'])) {
                         $parentUnit = Unit::where('name', 'ILIKE', $mapped['parent_name'])->first();
                         $parentId = $parentUnit ? $parentUnit->id : null;
-                    }
-                    
-                    if (!$parentId && $defaultUpt) {
+                    } elseif ($defaultUpt) {
                         $parentId = $defaultUpt->id;
                     }
 
-                    $giRows[] = [
+                    $rows[] = [
                         'name' => $mapped['name'] ?? '',
-                        'level' => 4, // Gardu Induk otomatis Level 4
+                        'level' => (int) ($mapped['level'] ?? 0),
                         'code' => $mapped['code'] ?: null,
                         'parent_id' => $parentId,
-                        'latitude' => $mapped['latitude'] ?? '',
-                        'longitude' => $mapped['longitude'] ?? '',
+                        'latitude' => isset($mapped['latitude']) ? str_replace(',', '.', $mapped['latitude']) : null,
+                        'longitude' => isset($mapped['longitude']) ? str_replace(',', '.', $mapped['longitude']) : null,
                     ];
                 }
-            }
-            fclose($handle);
 
-            foreach ($giRows as $row) {
-                $result = $this->processGenericUnitRowDirect($row);
-                $result['status'] === 'failed' ? $skipped++ : $created++;
-                if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
-            }
-            foreach ($towerRows as $mapped) {
-                $result = $this->processTowerRowNormalized($mapped);
-                $result['status'] === 'failed' ? $skipped++ : $created++;
-                if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
-            }
-        } else {
-            $rows = [];
-            while (($row = fgetcsv($handle)) !== false) {
-                if (count($row) < count($header)) continue;
-                $raw = array_combine($header, $row);
-                $mapped = $this->buildRowFromMapping($raw, $mapping);
-                $this->applyWktFallback($mapped, $raw, $wktColumn);
-                $this->applyNameFallback($mapped, $raw, $descColumn);
-
-                $parentId = null;
-                if (!empty($mapped['parent_name'])) {
-                    $parentUnit = Unit::where('name', 'ILIKE', $mapped['parent_name'])->first();
-                    $parentId = $parentUnit ? $parentUnit->id : null;
+                usort($rows, fn ($a, $b) => (int) $a['level'] <=> (int) $b['level']);
+                foreach ($rows as $row) {
+                    $result = $this->processGenericUnitRowDirect($row);
+                    $result['status'] === 'failed' ? $skipped++ : $created++;
+                    if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
                 }
-                
-                if (!$parentId && $defaultUpt) {
-                    $parentId = $defaultUpt->id;
-                }
-
-                $rows[] = [
-                    'name' => $mapped['name'] ?? '',
-                    'level' => (int) ($mapped['level'] ?? 0),
-                    'code' => $mapped['code'] ?: null,
-                    'parent_id' => $parentId,
-                    'latitude' => $mapped['latitude'] ?? '',
-                    'longitude' => $mapped['longitude'] ?? '',
-                ];
             }
-            fclose($handle);
 
-            usort($rows, fn ($a, $b) => (int) $a['level'] <=> (int) $b['level']);
-            foreach ($rows as $row) {
-                $result = $this->processGenericUnitRowDirect($row);
-                $result['status'] === 'failed' ? $skipped++ : $created++;
-                if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
-            }
+            $totalCreated += $created;
+            $totalSkipped += $skipped;
+            $allSkippedReasons = array_merge($allSkippedReasons, $skippedReasons);
         }
 
-        $message = "{$created} baris berhasil diimpor.";
-        if ($skipped > 0) {
-            $message .= " {$skipped} baris dilewati (lihat detail).";
+        $message = "{$totalCreated} baris berhasil diimpor dari semua file.";
+        if ($totalSkipped > 0) {
+            $message .= " {$totalSkipped} baris dilewati.";
         }
 
         return redirect()->route('manage-unit.import')
-            ->with($skipped > 0 ? 'error' : 'success', $message)
-            ->with('import_skipped_reasons', $skippedReasons);
+            ->with($totalSkipped > 0 && $totalCreated === 0 ? 'error' : 'success', $message)
+            ->with('import_skipped_reasons', $allSkippedReasons);
     }
 
-    /** Kalau lat/lng kosong tapi ada kolom WKT "POINT (lng lat)", parse dari situ. */
     private function applyWktFallback(array &$mapped, array $raw, ?string $wktColumn): void
     {
         if (($mapped['latitude'] ?? '') !== '' && ($mapped['longitude'] ?? '') !== '') {

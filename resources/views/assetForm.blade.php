@@ -182,10 +182,16 @@
                 <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-6">
 
                     {{-- Nama Jalur & Tegangan --}}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                             <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Nama Jalur (Nama SUTT)</label>
-                            <input type="text" name="name" value="{{ old('name', $asset->name ?? '') }}" required placeholder="Contoh: SUTT 150kV Bandung Selatan - Ujung Berung"
+                            <input type="text" name="name" value="{{ old('name', $asset->name ?? '') }}" required placeholder="Contoh: SUTT 150kV Bandung Selatan"
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                        </div>
+
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Functloc (Kode Lokasi)</label>
+                            <input type="text" name="functloc" value="{{ old('functloc', $asset->functloc ?? '') }}" required placeholder="Contoh: 150KV-BDG-UB"
                                 class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
                         </div>
 
@@ -200,7 +206,21 @@
                             </select>
                         </div>
                     </div>
-
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">UPT</label>
+                            <select name="upt_id" required
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                                <option value="">— Pilih UPT —</option>
+                                @foreach ($upts as $upt)
+                                    <option value="{{ $upt->id }}" @selected(old('upt_id', $asset->upt_id ?? '') == $upt->id)>
+                                        {{ $upt->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <!-- Field lainnya seperti Nama Jalur, Functloc, dll -->
+                    </div>
                     {{-- GI Awal & GI Akhir (Sudah Searchable) --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>

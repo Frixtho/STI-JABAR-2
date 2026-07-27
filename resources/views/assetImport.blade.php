@@ -160,6 +160,17 @@
                 </div>
             @endif
 
+            @if(session('import_skipped_reasons'))
+                <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-xs max-h-48 overflow-y-auto">
+                    <p class="font-bold mb-1">Contoh Alasan Baris Dilewati:</p>
+                    <ul class="list-disc list-inside space-y-1">
+                        @foreach(array_unique(session('import_skipped_reasons')) as $reason)
+                            <li>{{ $reason }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             @if ($errors->any())
                 <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                     {{ $errors->first() }}
@@ -177,7 +188,7 @@
                     </div>
                     <div>
                         <h2 class="text-base font-bold text-pln-800 dark:text-white">Upload File CSV SUTT</h2>
-                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah data Jalur SUTT (Nama Jalur, Tegangan, GI Awal, GI Akhir, Jumlah Tower, Panjang Jalur) secara massal.</p>
+                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah satu atau beberapa file data Jalur SUTT secara massal sekaligus.</p>
                     </div>
                 </div>
 
@@ -186,18 +197,24 @@
                     <form action="{{ route('manage-asset.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
-                        <!-- Upload File CSV -->
+                            <!-- Upload Multiple Files CSV -->
                         <div class="mb-6">
-                            <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-300">File CSV</label>
-                            <input type="file" name="file" accept=".csv,.txt" class="w-full border rounded-lg p-2 text-sm bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white" required>
-                            <p class="text-xs text-gray-500 mt-1">Pastikan kolom CSV sesuai dengan format: Nama Jalur, Tegangan, GI Awal, GI Akhir, Jumlah Tower, Panjang Jalur (km).</p>
+                            <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">File CSV (Bisa pilih lebih dari satu)</label>
+                            <input type="file" name="files[]" id="fileInput" accept=".csv,.txt" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#004A54] file:text-white hover:file:bg-[#003840] cursor-pointer" multiple required>
+                            <p class="text-xs text-gray-400 mt-1">Tekan dan tahan tombol Ctrl (Windows) atau Cmd (Mac) di keyboard untuk memilih banyak file sekaligus.</p>
+                            
+                            {{-- Container untuk menampilkan daftar file yang terpilih secara dinamis --}}
+                            <div id="fileListContainer" class="hidden mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300">
+                                <p class="font-semibold mb-1 text-[#004A54] dark:text-accent-400">File yang dipilih (<span id="fileCount">0</span> file):</p>
+                                <ul id="fileNamesList" class="list-disc list-inside space-y-0.5"></ul>
+                            </div>
                         </div>
 
                         <!-- Tombol Aksi -->
-                        <div class="flex items-center justify-end gap-3 border-t pt-4 border-gray-100 dark:border-gray-700">
-                            <a href="{{ route('manage-asset') }}" class="px-4 py-2 border rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Batal</a>
-                            <button type="submit" class="bg-[#004A54] hover:bg-[#003840] text-white px-5 py-2 rounded-lg text-sm font-medium">
-                                Proses Import
+                        <div class="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-gray-700 pt-4">
+                            <a href="{{ route('manage-asset') }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Batal</a>
+                            <button type="submit" class="bg-[#004A54] hover:bg-[#003840] text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
+                                Proses Import Semua
                             </button>
                         </div>
                     </form>
@@ -208,14 +225,31 @@
 </div>
 
 <script>
-    const adminMenuToggle = document.getElementById('adminMenuToggle');
-    const adminSubmenu = document.getElementById('adminSubmenu');
-    const adminMenuChevron = document.getElementById('adminMenuChevron');
+    const fileInput = document.getElementById('fileInput');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const fileNamesList = document.getElementById('fileNamesList');
+    const fileCount = document.getElementById('fileCount');
 
-    if (adminMenuToggle && adminSubmenu) {
-        adminMenuToggle.addEventListener('click', () => {
-            adminSubmenu.classList.toggle('hidden');
-            adminMenuChevron.classList.toggle('rotate-180');
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            fileNamesList.innerHTML = '';
+            const files = e.target.files;
+            
+            if (files.length > 0) {
+                fileListContainer.classList.remove('hidden');
+                fileCount.textContent = files.length;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const fileName = files[i].name;
+
+                    // Preview nama file ke dalam list
+                    const li = document.createElement('li');
+                    li.textContent = fileName;
+                    fileNamesList.appendChild(li);
+                }
+            } else {
+                fileListContainer.classList.add('hidden');
+            }
         });
     }
 </script>

@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\Unit;
+use App\Models\SuttTower;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 
 class AssetController extends Controller
 {
@@ -37,17 +40,34 @@ class AssetController extends Controller
 
     public function index(Request $request)
     {
-        $query = Asset::with(['giAwal', 'giAkhir'])->orderBy('name');
-
-        if ($category = $request->query('category')) {
-            $query->where('category', $category);
-        }
+        // Ambil data langsung dari tabel sutt_lines agar data hasil import CSV Anda muncul kembali
+        $query = DB::table('sutt_lines')->orderBy('name');
 
         if ($search = $request->query('search')) {
             $query->where('name', 'ILIKE', "%{$search}%");
         }
 
-        $assets = $query->paginate(20)->withQueryString();
+        // Ambil data dengan pagination
+        $lines = $query->paginate(20)->withQueryString();
+
+        // Tambahkan tegangan dinamis dan jumlah tower secara real-time untuk setiap jalur
+        foreach ($lines as $line) {
+            $teganganDinamis = '150 kV'; // Default
+            if (preg_match('/(30|70|150|500)\s*kv/i', $line->name, $matchTegangan)) {
+                $teganganDinamis = $matchTegangan[1] . ' kV';
+            }
+            $line->tegangan = $teganganDinamis;
+            
+            // Hitung jumlah tower
+            $line->jumlah_tower = SuttTower::where('sutt_line_id', $line->id)->count();
+            
+            // Hitung panjang KM jika belum ada di database
+            $line->panjang_km = $this->hitungPanjangJalurSUTT($line->id);
+        }
+
+        // Karena view manageAsset Anda sebelumnya menampung variabel $assets (dari model Asset),
+        // kita mapping atau sesuaikan agar tabel menampilkan data sutt_lines dengan aman.
+        $assets = $lines; 
 
         return view('manageAsset', compact('assets'));
     }
@@ -55,8 +75,6 @@ class AssetController extends Controller
     public function create(Request $request)
     {
         $upts = Unit::where('level', 2)->orderBy('name')->get();
-        
-        // Mengambil data Gardu Induk langsung dari tabel units (Level 4 / type 'gi')
         $garduInduks = Unit::where('level', 4)->orderBy('name')->get(); 
         $asset = null;
 
@@ -65,18 +83,35 @@ class AssetController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $this->validateAsset($request);
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'functloc' => 'required|string|max:50',
+            'upt_id' => 'required|exists:units,id',
+            'tegangan' => 'required|string',
+            'gi_awal_id' => 'required|exists:units,id',
+            'gi_akhir_id' => 'required|exists:units,id|different:gi_awal_id',
+            'jumlah_tower' => 'required|integer|min:1',
+            'panjang_km' => 'required|numeric|min:0',
+        ]);
 
-        Asset::create($validated);
+        Asset::create([
+            'name' => $request->name,
+            'functloc' => $request->functloc,
+            'category' => 'sutt',
+            'upt_id' => $request->upt_id,
+            'tegangan' => $request->tegangan,
+            'gi_awal_id' => $request->gi_awal_id,
+            'gi_akhir_id' => $request->gi_akhir_id,
+            'jumlah_tower' => $request->jumlah_tower,
+            'panjang_km' => $request->panjang_km,
+        ]);
 
-        return redirect()->route('manage-asset')->with('success', 'Aset berhasil ditambahkan.');
+        return redirect()->route('manage-asset')->with('success', 'Jalur SUTT berhasil ditambahkan.');
     }
 
     public function edit(Asset $asset)
     {
         $upts = Unit::where('level', 2)->orderBy('name')->get();
-        
-        // Mengambil data Gardu Induk dari tabel units
         $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
 
         return view('assetForm', compact('upts', 'garduInduks', 'asset'));
@@ -85,7 +120,6 @@ class AssetController extends Controller
     public function update(Request $request, Asset $asset)
     {
         $validated = $this->validateAsset($request, $asset->id);
-
         $asset->update($validated);
 
         return redirect()->route('manage-asset')->with('success', 'Aset berhasil diperbarui.');
@@ -102,9 +136,7 @@ class AssetController extends Controller
     {
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'category' => ['required', 'string', 'max:50'],
             'code' => ['nullable', 'string', 'max:50'],
-            // Validasi relasi ID mengarah ke tabel units, bukan assets lagi
             'gi_awal_id' => ['nullable', 'exists:units,id'],
             'gi_akhir_id' => ['nullable', 'exists:units,id'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
@@ -112,11 +144,10 @@ class AssetController extends Controller
         ]);
     }
 
-    // ===================== CSV IMPORT (1 langkah, auto-mapping) =====================
+    // ===================== CSV IMPORT =====================
 
-public function importForm()
+    public function importForm()
     {
-        // Sumber dropdown GI untuk import juga diarahkan ke Unit
         $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
 
         return view('assetImport', compact('garduInduks'));
@@ -125,82 +156,123 @@ public function importForm()
     public function import(Request $request)
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt'],
+            'files'   => ['required', 'array'],
+            'files.*' => ['required', 'file', 'mimes:csv,txt'],
             'default_category' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $handle = fopen($request->file('file')->getRealPath(), 'r');
-        
-        $rawHeader = fgetcsv($handle);
-        if (!$rawHeader) {
-            return redirect()->back()->with('error', 'File CSV kosong atau format tidak valid.');
-        }
+        $defaultCategory = $request->input('default_category', 'sutt'); 
+        $uploadedFiles = $request->file('files');
 
-        $header = array_map(function($col) {
-            return strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $col)));
-        }, $rawHeader);
+        $defaultUpt = Unit::where('level', 2)->first();
+        $defaultUptId = $defaultUpt ? $defaultUpt->id : 1;
 
-        $aliases = self::FIELD_ALIASES['generic'];
-        $mapping = [];
-        foreach ($aliases as $field => $candidates) {
-            $mapping[$field] = $this->guessColumn($header, $candidates);
-        }
+        $totalCreated = 0;
+        $totalSkipped = 0;
+        $allSkippedReasons = [];
+        $processedAssetIds = [];
 
-        $wktColumn = $this->guessColumn($header, ['wkt', 'geometry', 'geom']);
-        $descColumn = $this->guessColumn($header, ['description', 'deskripsi', 'keterangan']);
-        $defaultCategory = $request->input('default_category', 'umum');
+        foreach ($uploadedFiles as $file) {
+            $handle = fopen($file->getRealPath(), 'r');
+            
+            // Deteksi delimiter otomatis (koma atau titik koma)
+            $sampleLine = fgets($handle);
+            rewind($handle);
+            $delimiter = (substr_count($sampleLine, ';') > substr_count($sampleLine, ',')) ? ';' : ',';
 
-        $created = 0;
-        $skipped = 0;
-        $skippedReasons = [];
-
-        $rows = [];
-        while (($row = fgetcsv($handle)) !== false) {
-            if (count($row) < count($header)) continue;
-            $raw = array_combine($header, $row);
-            $mapped = $this->buildRowFromMapping($raw, $mapping);
-            $this->applyWktFallback($mapped, $raw, $wktColumn);
-            $this->applyNameFallback($mapped, $raw, $descColumn);
-
-            // Resolusi relasi GI Awal & GI Akhir berdasarkan nama jika ada di CSV
-            $giAwalId = null;
-            if (!empty($mapped['gi_awal'])) {
-                $giAwal = Asset::where('category', 'gi')->where('name', 'ILIKE', $mapped['gi_awal'])->first();
-                $giAwalId = $giAwal ? $giAwal->id : null;
+            $rawHeader = fgetcsv($handle, 0, $delimiter);
+            if (!$rawHeader) {
+                fclose($handle);
+                continue;
             }
 
-            $giAkhirId = null;
-            if (!empty($mapped['gi_akhir'])) {
-                $giAkhir = Asset::where('category', 'gi')->where('name', 'ILIKE', $mapped['gi_akhir'])->first();
-                $giAkhirId = $giAkhir ? $giAkhir->id : null;
+            $header = array_map(function($col) {
+                return strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $col)));
+            }, $rawHeader);
+
+            $aliases = self::FIELD_ALIASES['generic'];
+            $mapping = [];
+            foreach ($aliases as $field => $candidates) {
+                $mapping[$field] = $this->guessColumn($header, $candidates);
             }
 
-            $rows[] = [
-                'name' => $mapped['name'] ?? '',
-                'category' => $mapped['category'] ?: $defaultCategory,
-                'code' => $mapped['code'] ?: null,
-                'gi_awal_id' => $giAwalId,
-                'gi_akhir_id' => $giAkhirId,
-                'latitude' => $mapped['latitude'] ?? '',
-                'longitude' => $mapped['longitude'] ?? '',
-            ];
-        }
-        fclose($handle);
+            $wktColumn = $this->guessColumn($header, ['wkt', 'geometry', 'geom']);
+            $descColumn = $this->guessColumn($header, ['description', 'deskripsi', 'keterangan', 'nama']);
 
-        foreach ($rows as $row) {
-            $result = $this->processAssetRowDirect($row);
-            $result['status'] === 'failed' ? $skipped++ : $created++;
-            if ($result['status'] === 'failed') $skippedReasons[] = $result['alasan'];
+            $namaJalurDefault = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+
+            while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                if ($row === [null] || empty(array_filter($row))) {
+                    continue;
+                }
+
+                if (count($row) < count($header)) {
+                    $row = array_pad($row, count($header), null);
+                } elseif (count($row) > count($header)) {
+                    $row = array_slice($row, 0, count($header));
+                }
+                
+                $raw = array_combine($header, $row);
+                $mapped = $this->buildRowFromMapping($raw, $mapping);
+                $this->applyWktFallback($mapped, $raw, $wktColumn);
+                $this->applyNameFallback($mapped, $raw, $descColumn);
+
+                if (empty($mapped['name']) && empty($mapped['code'])) {
+                    continue;
+                }
+
+                $rowData = [
+                    'name'       => $mapped['name'] ?? $mapped['code'] ?? 'Unnamed Tower',
+                    'category'   => $defaultCategory,
+                    'functloc'   => $mapped['code'] ?? ('TOWER-' . uniqid()),
+                    'code'       => $mapped['code'] ?? null,
+                    'upt_id'     => $defaultUptId,
+                    'gi_awal_id' => null,
+                    'gi_akhir_id'=> null,
+                    'latitude'   => !empty($mapped['latitude']) ? $mapped['latitude'] : null,
+                    'longitude'  => !empty($mapped['longitude']) ? $mapped['longitude'] : null,
+                ];
+
+                $result = $this->processAssetRowDirect($rowData, $namaJalurDefault);
+                
+                if ($result['status'] === 'failed') {
+                    $totalSkipped++;
+                    $allSkippedReasons[] = $result['alasan'];
+                } else {
+                    $totalCreated++;
+                    if (isset($result['asset_id'])) {
+                        $processedAssetIds[] = $result['asset_id'];
+                    }
+                }
+            }
+            fclose($handle);
         }
 
-        $message = "{$created} baris aset berhasil diimpor.";
-        if ($skipped > 0) {
-            $message .= " {$skipped} baris dilewati.";
+        // --- HITUNG OTOMATIS PANJANG KM & JUMLAH TOWER ---
+        foreach (array_unique($processedAssetIds) as $assetId) {
+            $panjang = $this->hitungPanjangJalurSUTT($assetId);
+            $jumlahTower = SuttTower::where('sutt_line_id', $assetId)->count(); 
+            
+            // Simpan ke kolom jika ada, atau lewati jika tabel tidak punya kolom tersebut
+            try {
+                DB::table('sutt_lines')->where('id', $assetId)->update([
+                    'panjang_km' => $panjang,
+                    'jumlah_tower' => $jumlahTower,
+                    'updated_at' => now(),
+                ]);
+            } catch (\Exception $e) {
+                // Abaikan jika kolom tidak ada di tabel sutt_lines
+            }
+        }
+
+        $message = "{$totalCreated} baris titik tower berhasil diimpor & dihitung panjang jalurnya.";
+        if ($totalSkipped > 0) {
+            $message .= " {$totalSkipped} baris dilewati.";
         }
 
         return redirect()->route('manage-asset.import')
-            ->with($skipped > 0 ? 'error' : 'success', $message)
-            ->with('import_skipped_reasons', $skippedReasons);
+            ->with($totalSkipped > 0 ? 'error' : 'success', $message)
+            ->with('import_skipped_reasons', $allSkippedReasons);
     }
 
     private function applyWktFallback(array &$mapped, array $raw, ?string $wktColumn): void
@@ -249,23 +321,141 @@ public function importForm()
         return $mapped;
     }
 
-    private function processAssetRowDirect(array $row): array
+    private function processAssetRowDirect(array $row, string $namaJalurDefault): array
     {
-        if (empty($row['name'])) {
-            return ['status' => 'failed', 'alasan' => 'Nama aset kosong'];
+        if (empty($row['name']) && empty($row['functloc'])) {
+            return ['status' => 'failed', 'alasan' => 'Nama atau Functloc aset kosong'];
         }
 
-        Asset::updateOrCreate(
-            ['name' => $row['name'], 'category' => $row['category']],
-            [
-                'code' => $row['code'] ?? null,
-                'gi_awal_id' => $row['gi_awal_id'] ?? null,
-                'gi_akhir_id' => $row['gi_akhir_id'] ?? null,
-                'latitude' => !empty($row['latitude']) ? (float) $row['latitude'] : null,
-                'longitude' => !empty($row['longitude']) ? (float) $row['longitude'] : null,
-            ]
-        );
+        try {
+            $line = DB::table('sutt_lines')->where('name', $namaJalurDefault)->first();
 
-        return ['status' => 'success'];
+            if (!$line) {
+                $insertData = ['name' => $namaJalurDefault];
+                try {
+                    $lineId = DB::table('sutt_lines')->insertGetId(array_merge($insertData, [
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]));
+                } catch (\Exception $ex) {
+                    $lineId = DB::table('sutt_lines')->insertGetId($insertData);
+                }
+            } else {
+                $lineId = $line->id;
+            }
+
+            $rawText = trim($row['name'] ?? $row['code'] ?? '');
+            $towerNumber = 1;
+            if (preg_match_all('/\d+/', $rawText, $matches)) {
+                $allNumbers = $matches[0];
+                $towerNumber = (int) end($allNumbers);
+            }
+
+            SuttTower::updateOrCreate(
+                [
+                    'sutt_line_id' => $lineId,
+                    'tower_number' => $towerNumber,
+                ], 
+                [
+                    'functloc' => $row['functloc'] ?? ('TOWER-' . $lineId . '-' . $towerNumber),
+                    'name' => $row['name'] ?? 'Tower ' . $towerNumber,
+                    'latitude' => !empty($row['latitude']) ? (float) $row['latitude'] : null,
+                    'longitude' => !empty($row['longitude']) ? (float) $row['longitude'] : null,
+                ]
+            );
+
+            return ['status' => 'success', 'asset_id' => $lineId];
+        } catch (\Exception $e) {
+            return ['status' => 'failed', 'alasan' => $e->getMessage()];
+        }
+    }
+
+    public function show($id)
+    {
+        $line = DB::table('sutt_lines')->where('id', $id)->first();
+
+        if (!$line) {
+            return redirect()->back()->with('error', 'Jalur SUTT tidak ditemukan.');
+        }
+
+        $towers = SuttTower::where('sutt_line_id', $id)->orderBy('tower_number')->get();
+
+        $pathLengthKm = 0;
+        for ($i = 0; $i < $towers->count() - 1; $i++) {
+            $t1 = $towers[$i];
+            $t2 = $towers[$i + 1];
+
+            if ($t1->latitude && $t1->longitude && $t2->latitude && $t2->longitude) {
+                $pathLengthKm += $this->calculateHaversineDistance(
+                    $t1->latitude, $t1->longitude, 
+                    $t2->latitude, $t2->longitude
+                );
+            }
+        }
+
+        // Deteksi tegangan dinamis untuk halaman detail
+        $teganganDinamis = '150 kV';
+        if (preg_match('/(30|70|150|500)\s*kv/i', $line->name, $matchTegangan)) {
+            $teganganDinamis = $matchTegangan[1] . ' kV';
+        }
+
+        $line = (object) (array) $line;
+        $line->towers = $towers;
+        $line->tegangan = $teganganDinamis;
+
+        return view('assetShow', compact('line', 'towers', 'pathLengthKm'));
+    }
+
+    private function calculateHaversineDistance($lat1, $lon1, $lat2, $lon2)
+    {
+        $earthRadius = 6371; 
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLon / 2) * sin($dLon / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
+    }
+    
+    public function hitungPanjangJalurSUTT($assetId)
+    {
+        $towers = SuttTower::where('sutt_line_id', $assetId)
+                    ->orderBy('name', 'asc')
+                    ->get();
+
+        $totalKm = 0;
+
+        for ($i = 0; $i < count($towers) - 1; $i++) {
+            $lat1 = $towers[$i]->latitude;
+            $lon1 = $towers[$i]->longitude;
+            
+            $lat2 = $towers[$i+1]->latitude;
+            $lon2 = $towers[$i+1]->longitude;
+
+            $totalKm += $this->haversineGreatCircleDistance($lat1, $lon1, $lat2, $lon2);
+        }
+
+        return round($totalKm, 2); 
+    }
+
+    private function haversineGreatCircleDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371)
+    {
+        $latFrom = deg2rad($latitudeFrom);
+        $lonFrom = deg2rad($longitudeFrom);
+        $latTo = deg2rad($latitudeTo);
+        $lonTo = deg2rad($longitudeTo);
+
+        $latDelta = $latTo - $latFrom;
+        $lonDelta = $lonTo - $lonFrom;
+
+        $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
+            cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
+        
+        return $angle * $earthRadius;
     }
 }

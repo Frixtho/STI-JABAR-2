@@ -19,12 +19,13 @@ class AssetController extends Controller
     private const FIELD_ALIASES = [
         'generic' => [
             'name' => ['nama', 'name', 'nama_asset', 'nama aset'],
-            'category' => ['category', 'kategori', 'jenis'],
+            'category' => ['category', 'kategori', 'jenis', 'grup', 'group'],
             'code' => ['functloc', 'code', 'kode', 'no_tiang', 'no_tower'],
             'gi_awal' => ['gi_awal', 'gardu_induk_awal', 'gi awal', 'from_gi', 'gi1'],
             'gi_akhir' => ['gi_akhir', 'gardu_induk_akhir', 'gi akhir', 'to_gi', 'gi2'],
             'latitude' => ['lock lat', 'lock_lat', 'latitude', 'lat'],
             'longitude' => ['lock lng', 'lock_lng', 'longitude', 'lng'],
+            'wil_kerja' => ['wil. kerja', 'wil kerja', 'wilayah kerja', 'wil_kerja'],
         ],
     ];
 
@@ -297,6 +298,31 @@ class AssetController extends Controller
         if ($descColumn && ! empty($raw[$descColumn])) {
             $mapped['name'] = trim($raw[$descColumn]);
         }
+    }
+
+    /**
+     * array_combine() versi aman: kalau jumlah kolom baris beda dari header
+     * (lebih dikit atau lebih banyak, biasanya karena ada koma tak ter-quote
+     * di salah satu isi kolom), tetap dipaksa cocok alih-alih error/skip.
+     * Kelebihan kolom dipotong, kekurangan diisi string kosong.
+     */
+    private function safeCombineRow(array $header, array $row): ?array
+    {
+        // baris kosong (fgetcsv kadang balikin [null] untuk baris blank di akhir file)
+        if (count($row) === 1 && $row[0] === null) {
+            return null;
+        }
+
+        $headerCount = count($header);
+        $rowCount = count($row);
+
+        if ($rowCount > $headerCount) {
+            $row = array_slice($row, 0, $headerCount);
+        } elseif ($rowCount < $headerCount) {
+            $row = array_pad($row, $headerCount, '');
+        }
+
+        return array_combine($header, $row);
     }
 
     private function guessColumn(array $header, array $candidates): ?string

@@ -39,38 +39,59 @@ class AssetController extends Controller
         'longitude' => 'Longitude',
     ];
 
+    /** Pilihan tegangan yang valid buat dropdown filter & deteksi otomatis dari nama. */
+    private const TEGANGAN_OPTIONS = ['30', '70', '150', '500'];
+
     public function index(Request $request)
     {
-        // Ambil data langsung dari tabel sutt_lines agar data hasil import CSV Anda muncul kembali
-        $query = DB::table('sutt_lines')->orderBy('name');
+        // Query langsung dari sutt_towers, join ke sutt_lines buat ambil nama
+        // jalur & dipakai deteksi tegangan. Jadi 1 baris tabel = 1 tower.
+        $query = DB::table('sutt_towers')
+            ->join('sutt_lines', 'sutt_towers.sutt_line_id', '=', 'sutt_lines.id')
+            ->select(
+                'sutt_towers.id',
+                'sutt_towers.tower_number',
+                'sutt_towers.name',
+                'sutt_towers.functloc',
+                'sutt_towers.latitude',
+                'sutt_towers.longitude',
+                'sutt_lines.id as line_id',
+                'sutt_lines.name as line_name'
+            )
+            ->orderBy('sutt_lines.name')
+            ->orderBy('sutt_towers.tower_number');
 
         if ($search = $request->query('search')) {
-            $query->where('name', 'ILIKE', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('sutt_towers.name', 'ILIKE', "%{$search}%")
+                  ->orWhere('sutt_lines.name', 'ILIKE', "%{$search}%")
+                  ->orWhere('sutt_towers.functloc', 'ILIKE', "%{$search}%");
+            });
         }
 
-        // Ambil data dengan pagination
-        $lines = $query->paginate(20)->withQueryString();
+        // Filter tegangan dicocokkan ke nama jalur (sutt_lines.name), sama
+        // seperti pola deteksi tegangan yang dipakai di bawah.
+        $tegangan = $request->query('tegangan');
+        if ($tegangan && in_array($tegangan, self::TEGANGAN_OPTIONS)) {
+            $query->whereRaw('sutt_lines.name ~* ?', ["{$tegangan}\\s*kv"]);
+        }
 
-        // Tambahkan tegangan dinamis dan jumlah tower secara real-time untuk setiap jalur
-        foreach ($lines as $line) {
-            $teganganDinamis = '150 kV'; // Default
-            if (preg_match('/(30|70|150|500)\s*kv/i', $line->name, $matchTegangan)) {
+        $assets = $query->paginate(25)->withQueryString();
+
+        // Tegangan dinamis dideteksi dari nama jalur, ditempel ke tiap baris tower
+        foreach ($assets as $asset) {
+            $teganganDinamis = '150 kV'; // default
+            if (preg_match('/(30|70|150|500)\s*kv/i', $asset->line_name, $matchTegangan)) {
                 $teganganDinamis = $matchTegangan[1] . ' kV';
             }
-            $line->tegangan = $teganganDinamis;
-            
-            // Hitung jumlah tower
-            $line->jumlah_tower = SuttTower::where('sutt_line_id', $line->id)->count();
-            
-            // Hitung panjang KM jika belum ada di database
-            $line->panjang_km = $this->hitungPanjangJalurSUTT($line->id);
+            $asset->tegangan = $teganganDinamis;
         }
 
-        // Karena view manageAsset Anda sebelumnya menampung variabel $assets (dari model Asset),
-        // kita mapping atau sesuaikan agar tabel menampilkan data sutt_lines dengan aman.
-        $assets = $lines; 
-
-        return view('manageAsset', compact('assets'));
+        return view('manageAsset', [
+            'assets' => $assets,
+            'teganganOptions' => self::TEGANGAN_OPTIONS,
+            'selectedTegangan' => $tegangan,
+        ]);
     }
 
     public function create(Request $request)

@@ -178,71 +178,104 @@
 
                 <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-6">
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Level</label>
-                            <input type="hidden" name="level" value="4">
-                            <div class="mt-1.5 w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/50 py-2.5 px-3 text-sm text-gray-500 dark:text-gray-400">
-                                Level 4 — GI
+                    @if ($unit)
+                        {{-- Mode edit: form disederhanakan, cuma Nama, Functloc, Latitude, Longitude --}}
+                        <input type="hidden" name="level" value="{{ $unit->level }}">
+                        <input type="hidden" name="parent_id" value="{{ $unit->parent_id }}">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Nama</label>
+                                <input type="text" name="name" value="{{ old('name', $unit->name) }}" required
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
                             </div>
-                            <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">Form ini khusus input GI. Level 2 (UPT) & 3 (ULTG) otomatis terdeteksi dari ULTG yang dipilih.</p>
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Functloc</label>
+                                <input type="text" name="code" value="{{ old('code', $unit->code) }}" placeholder="Contoh: TRS-3512-254.254"
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                            </div>
                         </div>
 
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Kode (opsional)</label>
-                            <input type="text" name="code" value="{{ old('code', $unit->code ?? '') }}" placeholder="Contoh: GI-BDG"
-                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Latitude</label>
+                                <input type="text" name="latitude" value="{{ old('latitude', $unit->latitude) }}" placeholder="-6.914744"
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Longitude</label>
+                                <input type="text" name="longitude" value="{{ old('longitude', $unit->longitude) }}" placeholder="107.609810"
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                            </div>
                         </div>
-                    </div>
+                    @else
+                        {{-- Mode tambah: form lengkap, pilih UPT + auto-detect UIT --}}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Level</label>
+                                <input type="hidden" name="level" value="4">
+                                <div class="mt-1.5 w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/50 py-2.5 px-3 text-sm text-gray-500 dark:text-gray-400">
+                                    Level 4 — GI
+                                </div>
+                                <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">Form ini khusus input GI. Level 2 (UPT) & 3 (ULTG) otomatis terdeteksi dari ULTG yang dipilih.</p>
+                            </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Nama Unit (GI)</label>
-                            <input type="text" name="name" value="{{ old('name', $unit->name ?? '') }}" required placeholder="Contoh: GI Bandung Selatan"
-                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Functloc (opsional)</label>
+                                <input type="text" name="code" value="{{ old('code') }}" placeholder="Contoh: TRS-3512-254.254"
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                            </div>
                         </div>
 
-                        <div id="parentWrapper">
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Induk Unit (UPT)</label>
-                            <select name="parent_id" id="parentSelect" required
-                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
-                                <option value="">— Pilih UPT —</option>
-                                @foreach ($parents as $p)
-                                    @continue($p->level != 2)
-                                    <option value="{{ $p->id }}"
-                                        data-uit="{{ $p->parent->name ?? '—' }}"
-                                        @selected(old('parent_id', $unit->parent_id ?? '') == $p->id)>
-                                        {{ $p->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">ULTG di bawahnya tidak perlu dipilih — GI ini otomatis diparent-kan langsung ke UPT.</p>
-                        </div>
-                    </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Nama Unit (GI)</label>
+                                <input type="text" name="name" value="{{ old('name') }}" required placeholder="Contoh: GI Bandung Selatan"
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                            </div>
 
-                    <div id="hierarchyPreview" class="hidden flex items-start gap-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-4 py-3">
-                        <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-                        </svg>
-                        <p class="text-xs text-gray-600 dark:text-gray-300">
-                            Terdeteksi otomatis: <span id="hierarchyUit" class="font-semibold"></span>
-                            → <span id="hierarchyUpt" class="font-semibold"></span>
-                            → <span class="font-semibold">GI ini</span>
-                        </p>
-                    </div>
+                            <div id="parentWrapper">
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Induk Unit (UPT)</label>
+                                <select name="parent_id" id="parentSelect" required
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                                    <option value="">— Pilih UPT —</option>
+                                    @foreach ($parents as $p)
+                                        @continue($p->level != 2)
+                                        <option value="{{ $p->id }}"
+                                            data-uit="{{ $p->parent->name ?? '—' }}"
+                                            @selected(old('parent_id') == $p->id)>
+                                            {{ $p->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">ULTG di bawahnya tidak perlu dipilih — GI ini otomatis diparent-kan langsung ke UPT.</p>
+                            </div>
+                        </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Latitude</label>
-                            <input type="text" name="latitude" value="{{ old('latitude', $unit->latitude ?? '') }}" placeholder="-6.914744"
-                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                        <div id="hierarchyPreview" class="hidden flex items-start gap-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 px-4 py-3">
+                            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                            </svg>
+                            <p class="text-xs text-gray-600 dark:text-gray-300">
+                                Terdeteksi otomatis: <span id="hierarchyUit" class="font-semibold"></span>
+                                → <span id="hierarchyUpt" class="font-semibold"></span>
+                                → <span class="font-semibold">GI ini</span>
+                            </p>
                         </div>
-                        <div>
-                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Longitude</label>
-                            <input type="text" name="longitude" value="{{ old('longitude', $unit->longitude ?? '') }}" placeholder="107.609810"
-                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Latitude</label>
+                                <input type="text" name="latitude" value="{{ old('latitude') }}" placeholder="-6.914744"
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                            </div>
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Longitude</label>
+                                <input type="text" name="longitude" value="{{ old('longitude') }}" placeholder="107.609810"
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                            </div>
                         </div>
-                    </div>
+                    @endif
 
                     {{-- Info box --}}
                     <div class="flex items-start gap-3 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-100 dark:border-cyan-900/40 px-4 py-3">
@@ -281,23 +314,25 @@
         });
     }
 
-    // Deteksi otomatis UIT dari UPT yang dipilih (ULTG tidak perlu dipilih)
+    // Deteksi otomatis UIT dari UPT yang dipilih (cuma ada di mode tambah/create)
     const parentSelect = document.getElementById('parentSelect');
     const hierarchyPreview = document.getElementById('hierarchyPreview');
     const hierarchyUpt = document.getElementById('hierarchyUpt');
     const hierarchyUit = document.getElementById('hierarchyUit');
 
-    function updateHierarchyPreview() {
-        const selected = parentSelect.options[parentSelect.selectedIndex];
-        if (!selected || !selected.value) {
-            hierarchyPreview.classList.add('hidden');
-            return;
+    if (parentSelect && hierarchyPreview) {
+        function updateHierarchyPreview() {
+            const selected = parentSelect.options[parentSelect.selectedIndex];
+            if (!selected || !selected.value) {
+                hierarchyPreview.classList.add('hidden');
+                return;
+            }
+            hierarchyUpt.textContent = selected.textContent.trim();
+            hierarchyUit.textContent = selected.dataset.uit || '—';
+            hierarchyPreview.classList.remove('hidden');
         }
-        hierarchyUpt.textContent = selected.textContent.trim();
-        hierarchyUit.textContent = selected.dataset.uit || '—';
-        hierarchyPreview.classList.remove('hidden');
+        parentSelect.addEventListener('change', updateHierarchyPreview);
+        updateHierarchyPreview();
     }
-    parentSelect.addEventListener('change', updateHierarchyPreview);
-    updateHierarchyPreview();
 </script>
 @endsection

@@ -162,7 +162,7 @@
             <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Manage Asset</p>
-                    <h1 class="text-xl font-bold text-pln-800 dark:text-white tracking-wide">Jalur SUTT</h1>
+                    <h1 class="text-xl font-bold text-pln-800 dark:text-white tracking-wide">Tower SUTT</h1>
                 </div>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('manage-asset.import.form') }}" class="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -189,9 +189,21 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h12M4 18h8" />
                             </svg>
                         </div>
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama jalur SUTT..."
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama tower, jalur, atau functloc..."
                             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-9 pr-4 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] transition-colors">
                     </div>
+
+                    <div class="shrink-0 flex items-center gap-2">
+                        <label class="text-sm font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Tegangan:</label>
+                        <select name="tegangan" onchange="this.form.submit()"
+                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-700 dark:text-gray-200 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] transition-colors">
+                            <option value="">Semua Tegangan</option>
+                            @foreach ($teganganOptions as $kv)
+                                <option value="{{ $kv }}" @selected($selectedTegangan == $kv)>{{ $kv }} kV</option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <div class="shrink-0">
                         <a href="{{ route('manage-asset') }}" class="border-2 border-[#004A54] dark:border-accent-400 text-[#004A54] dark:text-accent-400 px-5 py-2 rounded-lg text-sm font-bold hover:bg-cyan-50/50 dark:hover:bg-gray-700 transition-all block text-center tracking-wide">
                             Reset
@@ -200,48 +212,43 @@
                 </form>
             </div>
 
-            {{-- ===================== TABLE SUTT ===================== --}}
+            {{-- ===================== TABLE TOWER SUTT ===================== --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
                 {{-- Header kolom --}}
                 <div class="grid grid-cols-7 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    <div class="col-span-2">Nama Jalur</div>
+                    <div class="col-span-2">Nama Tower</div>
+                    <div class="col-span-2">Jalur SUTT</div>
                     <div>Tegangan</div>
-                    <div>GI Awal</div>
-                    <div>GI Akhir</div>
-                    <div>Jumlah Tower</div>
-                    <div class="text-right">Panjang (km)</div>
+                    <div>Functloc</div>
+                    <div class="text-right">Koordinat</div>
                 </div>
 
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse ($assets ?? [] as $asset)
                         <div class="grid grid-cols-7 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
-                            <div class="col-span-2 font-semibold text-[#004A54] dark:text-accent-400">
-                                <a href="{{ route('manage-asset.show', $asset->id ?? 1) }}" class="hover:underline">
-                                    {{ $asset->name ?? $asset->nama_jalur ?? '-' }}
+                            <div class="col-span-2 font-semibold text-gray-800 dark:text-white truncate">
+                                {{ $asset->name ?? '-' }}
+                            </div>
+
+                            <div class="col-span-2 text-xs text-[#004A54] dark:text-accent-400 truncate">
+                                <a href="{{ route('manage-asset.show', $asset->line_id) }}" class="hover:underline" title="{{ $asset->line_name }}">
+                                    {{ $asset->line_name ?? '-' }}
                                 </a>
                             </div>
 
                             <div class="text-gray-600 dark:text-gray-300">
                                 <span class="px-2 py-1 text-xs font-semibold rounded bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300">
-                                    {{ $asset->voltage ?? $asset->tegangan ?? '-' }} kV
+                                    {{ $asset->tegangan ?? '-' }}
                                 </span>
                             </div>
 
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ $asset->giAwal->name ?? $asset->giStart->name ?? $asset->gi_awal ?? '-' }}
+                            <div class="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                {{ $asset->functloc ?? '-' }}
                             </div>
 
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ $asset->giAkhir->name ?? $asset->giEnd->name ?? $asset->gi_akhir ?? '-' }}
-                            </div>
-
-                            <div class="text-xs font-medium text-gray-700 dark:text-gray-200">
-                                {{ $asset->jumlah_tower ?? optional($asset->towers)->count() ?? 0 }}
-                            </div>
-
-                            <div class="text-right text-xs font-semibold text-gray-800 dark:text-white">
-                                {{ isset($asset->panjang_km) ? number_format($asset->panjang_km, 2, ',', '.') : (isset($asset->length_km) ? number_format($asset->length_km, 2, ',', '.') : '0,00') }} km
+                            <div class="text-right text-xs text-gray-500 dark:text-gray-400">
+                                {{ $asset->latitude ?? '-' }}, {{ $asset->longitude ?? '-' }}
                             </div>
                         </div>
                     @empty
@@ -249,7 +256,7 @@
                             <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
-                            Belum ada data jalur SUTT. Import lewat "Import Data" atau tambahkan secara manual.
+                            Belum ada data tower. Import lewat "Import Data" atau tambahkan secara manual.
                         </div>
                     @endforelse
                 </div>
@@ -257,7 +264,7 @@
                 @if(isset($assets) && method_exists($assets, 'links'))
                     <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                            Menampilkan {{ $assets->firstItem() ?? 0 }} - {{ $assets->lastItem() ?? 0 }} dari {{ $assets->total() }} jalur SUTT
+                            Menampilkan {{ $assets->firstItem() ?? 0 }} - {{ $assets->lastItem() ?? 0 }} dari {{ $assets->total() }} tower
                         </div>
                         <div class="laravel-pagination">
                             {{ $assets->onEachSide(-1)->links() }}

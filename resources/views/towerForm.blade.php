@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => ($line->name ?? 'Detail Jalur') . ' — PLN Financial'])
+@extends('layouts.app', ['title' => 'Edit Tower — PLN Financial'])
 
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
@@ -135,99 +135,93 @@
         </header>
 
         {{-- Content Area --}}
-        <main class="p-6 space-y-5">
-
-            @if (session('success'))
-                <div class="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-                    {{ session('success') }}
-                </div>
-            @endif
-
-            @if (session('error'))
-                <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-                    {{ session('error') }}
-                </div>
-            @endif
+        <main class="p-6 lg:p-10 space-y-5 w-full">
 
             {{-- Breadcrumb --}}
-            <nav class="flex items-center gap-1.5 text-sm">
+            <nav class="flex items-center gap-1.5 text-sm flex-wrap">
                 <a href="{{ route('manage-asset') }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">Manage Asset</a>
                 <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
-                <span class="font-semibold text-gray-700 dark:text-gray-200">{{ $line->name ?? '-' }}</span>
+                <a href="{{ route('manage-asset.show', $tower->sutt_line_id) }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">
+                    {{ $line->name ?? 'Detail Jalur' }}
+                </a>
+                <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                </svg>
+                <span class="font-semibold text-gray-700 dark:text-gray-200">Edit Tower</span>
             </nav>
 
-            <h1 class="text-xl font-bold text-pln-800 dark:text-white">{{ $line->name ?? '-' }}</h1>
+            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Edit Tower</h1>
 
-            {{-- Stat cards --}}
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                    <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold">Tegangan</p>
-                    <p class="text-lg font-bold text-pln-800 dark:text-white mt-1">{{ $line->tegangan ?? '—' }}</p>
+            @if ($errors->any())
+                <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
+                    <ul class="list-disc list-inside">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
                 </div>
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                    <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold">GI Awal → Akhir</p>
-                    <p class="text-lg font-bold text-pln-800 dark:text-white mt-1">
-                        {{ $line->gi_awal_name ?? '—' }} → {{ $line->gi_akhir_name ?? '—' }}
-                    </p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                    <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold">Jumlah Tower</p>
-                    <p class="text-lg font-bold text-pln-800 dark:text-white mt-1">{{ $towers->count() }}</p>
-                </div>
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
-                    <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold">Panjang Jalur (menyusuri tower)</p>
-                    <p class="text-lg font-bold text-pln-800 dark:text-white mt-1">{{ number_format($pathLengthKm, 2) }} km</p>
-                </div>
-            </div>
+            @endif
 
-            {{-- ===================== TABLE TOWER ===================== --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <form method="POST" action="{{ route('manage-asset.tower.update', $tower->id) }}"
+                class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                @csrf
+                @method('PATCH')
 
-                <div class="grid grid-cols-7 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    <div>Urutan (T)</div>
-                    <div class="col-span-2">Nama</div>
-                    <div>Functloc</div>
-                    <div>Latitude</div>
-                    <div>Longitude</div>
-                    <div class="text-center">Aksi</div>
+                {{-- Card Header --}}
+                <div class="flex items-start gap-4 p-8 pb-6">
+                    <div class="w-11 h-11 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h2 class="text-base font-bold text-pln-800 dark:text-white">Informasi Tower</h2>
+                        <p class="text-sm text-gray-400 dark:text-gray-500">Bagian dari jalur "{{ $line->name ?? '-' }}".</p>
+                    </div>
                 </div>
 
-                <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                    @forelse ($towers as $tower)
-                        <div class="grid grid-cols-7 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
-                            <div class="text-gray-500 dark:text-gray-400">{{ $tower->tower_number }}</div>
-                            <div class="col-span-2 font-semibold text-gray-800 dark:text-white truncate">{{ $tower->name ?? '-' }}</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ $tower->functloc ?? '-' }}</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ $tower->latitude ?? '-' }}</div>
-                            <div class="text-xs text-gray-500 dark:text-gray-400">{{ $tower->longitude ?? '-' }}</div>
+                <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-6">
 
-                            <div class="flex items-center justify-center gap-2">
-                                <a href="{{ route('manage-asset.tower.edit', $tower->id) }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                </a>
-                                <form action="{{ route('manage-asset.tower.destroy', $tower->id) }}" method="POST" onsubmit="return confirm('Hapus tower {{ $tower->name }}?')" class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none">
-                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </form>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Nama</label>
+                            <input type="text" name="name" value="{{ old('name', $tower->name) }}" required
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
                         </div>
-                    @empty
-                        <div class="p-12 text-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800">
-                            Belum ada tower pada jalur ini.
-                        </div>
-                    @endforelse
-                </div>
-            </div>
 
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Functloc</label>
+                            <input type="text" name="functloc" value="{{ old('functloc', $tower->functloc) }}" required
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Latitude</label>
+                            <input type="text" name="latitude" value="{{ old('latitude', $tower->latitude) }}" placeholder="-6.914744"
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Longitude</label>
+                            <input type="text" name="longitude" value="{{ old('longitude', $tower->longitude) }}" placeholder="107.609810"
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 px-8 py-5 border-t border-gray-100 dark:border-gray-700">
+                    <a href="{{ route('manage-asset.show', $tower->sutt_line_id) }}" class="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-6 py-2.5 rounded-md text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Batal</a>
+                    <button type="submit" class="inline-flex items-center gap-2 bg-[#004A54] text-white px-6 py-2.5 rounded-md text-sm font-medium hover:bg-[#00363d] transition-colors">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5v9.75a.75.75 0 0 0 .75.75h6a.75.75 0 0 0 .75-.75V4.5m-9 0h9a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5h-13.5a1.5 1.5 0 0 1-1.5-1.5V7.629c0-.398.158-.78.44-1.06l2.129-2.13c.281-.281.663-.44 1.06-.44Z" />
+                        </svg>
+                        Simpan Perubahan
+                    </button>
+                </div>
+            </form>
         </main>
     </div>
 </div>

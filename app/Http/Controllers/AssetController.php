@@ -44,47 +44,30 @@ class AssetController extends Controller
 
     public function index(Request $request)
     {
-        // Query langsung dari sutt_towers, join ke sutt_lines buat ambil nama
-        // jalur & dipakai deteksi tegangan. Jadi 1 baris tabel = 1 tower.
-        $query = DB::table('sutt_towers')
-            ->join('sutt_lines', 'sutt_towers.sutt_line_id', '=', 'sutt_lines.id')
-            ->select(
-                'sutt_towers.id',
-                'sutt_towers.tower_number',
-                'sutt_towers.name',
-                'sutt_towers.functloc',
-                'sutt_towers.latitude',
-                'sutt_towers.longitude',
-                'sutt_lines.id as line_id',
-                'sutt_lines.name as line_name'
-            )
-            ->orderBy('sutt_lines.name')
-            ->orderBy('sutt_towers.tower_number');
+        // Balik ke per-jalur (1 baris = 1 jalur SUTT), bukan per-tower.
+        $query = DB::table('sutt_lines')->orderBy('name');
 
         if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('sutt_towers.name', 'ILIKE', "%{$search}%")
-                  ->orWhere('sutt_lines.name', 'ILIKE', "%{$search}%")
-                  ->orWhere('sutt_towers.functloc', 'ILIKE', "%{$search}%");
-            });
+            $query->where('name', 'ILIKE', "%{$search}%");
         }
 
-        // Filter tegangan dicocokkan ke nama jalur (sutt_lines.name), sama
-        // seperti pola deteksi tegangan yang dipakai di bawah.
         $tegangan = $request->query('tegangan');
         if ($tegangan && in_array($tegangan, self::TEGANGAN_OPTIONS)) {
-            $query->whereRaw('sutt_lines.name ~* ?', ["{$tegangan}\\s*kv"]);
+            $query->whereRaw('name ~* ?', ["{$tegangan}\\s*kv"]);
         }
 
-        $assets = $query->paginate(25)->withQueryString();
+        $assets = $query->paginate(20)->withQueryString();
 
-        // Tegangan dinamis dideteksi dari nama jalur, ditempel ke tiap baris tower
-        foreach ($assets as $asset) {
-            $teganganDinamis = '150 kV'; // default
-            if (preg_match('/(30|70|150|500)\s*kv/i', $asset->line_name, $matchTegangan)) {
+        foreach ($assets as $line) {
+            $teganganDinamis = '150 kV';
+            if (preg_match('/(30|70|150|500)\s*kv/i', $line->name, $matchTegangan)) {
                 $teganganDinamis = $matchTegangan[1] . ' kV';
             }
-            $asset->tegangan = $teganganDinamis;
+            $line->tegangan = $teganganDinamis;
+
+            // GI Awal / Akhir (kalau kolomnya ada isinya & unit-nya ketemu)
+            $line->gi_awal_name = isset($line->gi_awal_id) ? optional(Unit::find($line->gi_awal_id))->name : null;
+            $line->gi_akhir_name = isset($line->gi_akhir_id) ? optional(Unit::find($line->gi_akhir_id))->name : null;
         }
 
         return view('manageAsset', [
@@ -272,19 +255,7 @@ class AssetController extends Controller
 
         // --- HITUNG OTOMATIS PANJANG KM & JUMLAH TOWER ---
         foreach (array_unique($processedAssetIds) as $assetId) {
-            $panjang = $this->hitungPanjangJalurSUTT($assetId);
-            $jumlahTower = SuttTower::where('sutt_line_id', $assetId)->count(); 
-            
-            // Simpan ke kolom jika ada, atau lewati jika tabel tidak punya kolom tersebut
-            try {
-                DB::table('sutt_lines')->where('id', $assetId)->update([
-                    'panjang_km' => $panjang,
-                    'jumlah_tower' => $jumlahTower,
-                    'updated_at' => now(),
-                ]);
-            } catch (\Exception $e) {
-                // Abaikan jika kolom tidak ada di tabel sutt_lines
-            }
+            $this->recalcLineStats($assetId);
         }
 
         $message = "{$totalCreated} baris titik tower berhasil diimpor & dihitung panjang jalurnya.";
@@ -451,6 +422,65 @@ class AssetController extends Controller
         $line->tegangan = $teganganDinamis;
 
         return view('assetShow', compact('line', 'towers', 'pathLengthKm'));
+    }
+
+    // ===================== CRUD TOWER (dari halaman detail jalur) =====================
+
+    public function editTower($towerId)
+    {
+        $tower = SuttTower::findOrFail($towerId);
+        $line = DB::table('sutt_lines')->where('id', $tower->sutt_line_id)->first();
+
+        return view('towerForm', compact('tower', 'line'));
+    }
+
+    public function updateTower(Request $request, $towerId)
+    {
+        $tower = SuttTower::findOrFail($towerId);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'functloc' => ['required', 'string', 'max:100'],
+            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
+        ]);
+
+        $tower->update($validated);
+
+        $this->recalcLineStats($tower->sutt_line_id);
+
+        return redirect()->route('manage-asset.show', $tower->sutt_line_id)
+            ->with('success', 'Data tower berhasil diperbarui.');
+    }
+
+    public function destroyTower($towerId)
+    {
+        $tower = SuttTower::findOrFail($towerId);
+        $lineId = $tower->sutt_line_id;
+
+        $tower->delete();
+
+        $this->recalcLineStats($lineId);
+
+        return redirect()->route('manage-asset.show', $lineId)
+            ->with('success', 'Tower berhasil dihapus.');
+    }
+
+    /** Hitung ulang panjang_km & jumlah_tower punya sebuah jalur, simpan kalau kolomnya ada. */
+    private function recalcLineStats(int $lineId): void
+    {
+        $panjang = $this->hitungPanjangJalurSUTT($lineId);
+        $jumlahTower = SuttTower::where('sutt_line_id', $lineId)->count();
+
+        try {
+            DB::table('sutt_lines')->where('id', $lineId)->update([
+                'panjang_km' => $panjang,
+                'jumlah_tower' => $jumlahTower,
+                'updated_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            // Abaikan jika kolom tidak ada di tabel sutt_lines
+        }
     }
 
     private function calculateHaversineDistance($lat1, $lon1, $lat2, $lon2)

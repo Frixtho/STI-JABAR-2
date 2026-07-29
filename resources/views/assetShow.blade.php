@@ -174,7 +174,7 @@
                 </div>
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                     <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold">Jumlah Tower</p>
-                    <p class="text-lg font-bold text-pln-800 dark:text-white mt-1">{{ $towers->count() }}</p>
+                    <p class="text-lg font-bold text-pln-800 dark:text-white mt-1">{{ $totalTowers ?? $towers->total() }}</p>
                 </div>
                 <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4">
                     <p class="text-xs text-gray-400 dark:text-gray-500 font-semibold">Panjang Jalur (menyusuri tower)</p>
@@ -226,6 +226,17 @@
                         </div>
                     @endforelse
                 </div>
+
+                @if(isset($towers) && method_exists($towers, 'links'))
+                    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                            Menampilkan {{ $towers->firstItem() ?? 0 }} - {{ $towers->lastItem() ?? 0 }} dari {{ $towers->total() }} tower
+                        </div>
+                        <div class="laravel-pagination">
+                            {{ $towers->onEachSide(1)->links() }}
+                        </div>
+                    </div>
+                @endif
             </div>
 
         </main>

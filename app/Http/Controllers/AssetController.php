@@ -425,31 +425,43 @@ class AssetController extends Controller
             return redirect()->back()->with('error', 'Jalur SUTT tidak ditemukan.');
         }
 
-        $towers = SuttTower::where('sutt_line_id', $id)->orderBy('tower_number')->get();
+        // Ambil SEMUA tower (tanpa pagination) khusus buat hitung jumlah & panjang jalur
+        $allTowersOrdered = SuttTower::where('sutt_line_id', $id)->orderBy('tower_number')->get();
 
         $pathLengthKm = 0;
-        for ($i = 0; $i < $towers->count() - 1; $i++) {
-            $t1 = $towers[$i];
-            $t2 = $towers[$i + 1];
+        for ($i = 0; $i < $allTowersOrdered->count() - 1; $i++) {
+            $t1 = $allTowersOrdered[$i];
+            $t2 = $allTowersOrdered[$i + 1];
 
             if ($t1->latitude && $t1->longitude && $t2->latitude && $t2->longitude) {
                 $pathLengthKm += $this->calculateHaversineDistance(
-                    $t1->latitude, $t1->longitude, 
+                    $t1->latitude, $t1->longitude,
                     $t2->latitude, $t2->longitude
                 );
             }
         }
 
+        // Yang ditampilkan di tabel: di-paginate biar gak numpuk ratusan baris
+        $towers = SuttTower::where('sutt_line_id', $id)
+            ->orderBy('tower_number')
+            ->paginate(50)
+            ->withQueryString();
+
+        // Deteksi tegangan dinamis untuk halaman detail
         $teganganDinamis = '150 kV';
         if (preg_match('/(30|70|150|500)\s*kv/i', $line->name, $matchTegangan)) {
             $teganganDinamis = $matchTegangan[1] . ' kV';
         }
 
         $line = (object) (array) $line;
-        $line->towers = $towers;
         $line->tegangan = $teganganDinamis;
 
-        return view('assetShow', compact('line', 'towers', 'pathLengthKm'));
+        return view('assetShow', [
+            'line' => $line,
+            'towers' => $towers,
+            'totalTowers' => $allTowersOrdered->count(),
+            'pathLengthKm' => $pathLengthKm,
+        ]);
     }
 
     // ===================== CRUD TOWER (dari halaman detail jalur) =====================

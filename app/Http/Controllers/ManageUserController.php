@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\AssetHistory;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
 class ManageUserController extends Controller
@@ -69,6 +71,14 @@ class ManageUserController extends Controller
 
         $user->update($validated);
 
+        // Catat riwayat perubahan (Audit Trail)
+        AssetHistory::create([
+            'asset_id'    => null,
+            'user_id'     => Auth::id(),
+            'action'      => 'UBAH',
+            'description' => 'Memperbarui data pengguna: ' . $user->name,
+        ]);
+
         return redirect()->route('manage-user')->with('success', 'Data pengguna berhasil diperbarui.');
     }
 
@@ -84,7 +94,16 @@ class ManageUserController extends Controller
             return redirect()->route('manage-user')->with('error', 'Gagal! Pengguna master sistem tidak boleh dihapus.');
         }
 
+        $userName = $user->name;
         $user->delete();
+
+        // Catat riwayat penghapusan (Audit Trail)
+        AssetHistory::create([
+            'asset_id'    => null,
+            'user_id'     => Auth::id(),
+            'action'      => 'HAPUS',
+            'description' => 'Menghapus pengguna: ' . $userName,
+        ]);
 
         return redirect()->route('manage-user')->with('success', 'Pengguna berhasil dihapus!');
     }

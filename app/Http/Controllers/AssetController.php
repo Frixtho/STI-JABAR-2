@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Asset;
 use App\Models\Unit;
 use App\Models\SuttTower;
+use App\Models\AssetHistory;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -99,7 +100,7 @@ class AssetController extends Controller
             'panjang_km' => 'required|numeric|min:0',
         ]);
 
-        Asset::create([
+        $asset = Asset::create([
             'name' => $request->name,
             'functloc' => $request->functloc,
             'category' => 'sutt',
@@ -109,6 +110,14 @@ class AssetController extends Controller
             'gi_akhir_id' => $request->gi_akhir_id,
             'jumlah_tower' => $request->jumlah_tower,
             'panjang_km' => $request->panjang_km,
+        ]);
+
+        // Catat ke Asset History
+        AssetHistory::create([
+            'asset_id' => $asset->id,
+            'user_id' => auth()->id(),
+            'action' => 'TAMBAH',
+            'description' => 'Menambahkan jalur SUTT baru: ' . $asset->name,
         ]);
 
         return redirect()->route('manage-asset')->with('success', 'Jalur SUTT berhasil ditambahkan.');
@@ -127,12 +136,31 @@ class AssetController extends Controller
         $validated = $this->validateAsset($request, $asset->id);
         $asset->update($validated);
 
+        // Catat ke Asset History
+        AssetHistory::create([
+            'asset_id' => $asset->id,
+            'user_id' => auth()->id(),
+            'action' => 'UBAH',
+            'description' => 'Memperbarui data informasi aset: ' . $asset->name,
+        ]);
+
         return redirect()->route('manage-asset')->with('success', 'Aset berhasil diperbarui.');
     }
 
     public function destroy(Asset $asset)
     {
+        $assetName = $asset->name;
+        $assetId = $asset->id;
+        
         $asset->delete();
+
+        // Catat ke Asset History
+        AssetHistory::create([
+            'asset_id' => $assetId,
+            'user_id' => auth()->id(),
+            'action' => 'HAPUS',
+            'description' => 'Menghapus aset/jalur SUTT: ' . $assetName,
+        ]);
 
         return redirect()->route('manage-asset')->with('success', 'Aset berhasil dihapus.');
     }
@@ -256,6 +284,14 @@ class AssetController extends Controller
         // --- HITUNG OTOMATIS PANJANG KM & JUMLAH TOWER ---
         foreach (array_unique($processedAssetIds) as $assetId) {
             $this->recalcLineStats($assetId);
+            
+            // Catat history import/tambah lewat CSV
+            AssetHistory::create([
+                'asset_id' => $assetId,
+                'user_id' => auth()->id(),
+                'action' => 'TAMBAH',
+                'description' => 'Melakukan impor data titik tower via CSV.',
+            ]);
         }
 
         $message = "{$totalCreated} baris titik tower berhasil diimpor & dihitung panjang jalurnya.";
@@ -292,15 +328,8 @@ class AssetController extends Controller
         }
     }
 
-    /**
-     * array_combine() versi aman: kalau jumlah kolom baris beda dari header
-     * (lebih dikit atau lebih banyak, biasanya karena ada koma tak ter-quote
-     * di salah satu isi kolom), tetap dipaksa cocok alih-alih error/skip.
-     * Kelebihan kolom dipotong, kekurangan diisi string kosong.
-     */
     private function safeCombineRow(array $header, array $row): ?array
     {
-        // baris kosong (fgetcsv kadang balikin [null] untuk baris blank di akhir file)
         if (count($row) === 1 && $row[0] === null) {
             return null;
         }
@@ -411,7 +440,6 @@ class AssetController extends Controller
             }
         }
 
-        // Deteksi tegangan dinamis untuk halaman detail
         $teganganDinamis = '150 kV';
         if (preg_match('/(30|70|150|500)\s*kv/i', $line->name, $matchTegangan)) {
             $teganganDinamis = $matchTegangan[1] . ' kV';
@@ -449,6 +477,14 @@ class AssetController extends Controller
 
         $this->recalcLineStats($tower->sutt_line_id);
 
+        // Catat ke Asset History untuk perubahan tower
+        AssetHistory::create([
+            'asset_id' => $tower->sutt_line_id,
+            'user_id' => auth()->id(),
+            'action' => 'UBAH',
+            'description' => 'Memperbarui data tower: ' . $tower->name,
+        ]);
+
         return redirect()->route('manage-asset.show', $tower->sutt_line_id)
             ->with('success', 'Data tower berhasil diperbarui.');
     }
@@ -457,10 +493,19 @@ class AssetController extends Controller
     {
         $tower = SuttTower::findOrFail($towerId);
         $lineId = $tower->sutt_line_id;
+        $towerName = $tower->name;
 
         $tower->delete();
 
         $this->recalcLineStats($lineId);
+
+        // Catat ke Asset History untuk penghapusan tower
+        AssetHistory::create([
+            'asset_id' => $lineId,
+            'user_id' => auth()->id(),
+            'action' => 'HAPUS',
+            'description' => 'Menghapus tower: ' . $towerName,
+        ]);
 
         return redirect()->route('manage-asset.show', $lineId)
             ->with('success', 'Tower berhasil dihapus.');
@@ -534,5 +579,15 @@ class AssetController extends Controller
             cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
         
         return $angle * $earthRadius;
+    }
+
+    /**
+     * Menampilkan halaman riwayat perubahan (Audit Trail)
+     */
+    public function history()
+    {
+        $histories = \App\Models\AssetHistory::with('user')->latest()->paginate(10); 
+
+        return view('assetHistory', compact('histories'));
     }
 }

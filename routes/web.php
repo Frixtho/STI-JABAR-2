@@ -57,9 +57,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('manage-unit/{unit}', [UnitController::class, 'update'])->name('manage-unit.update');
     Route::delete('manage-unit/{unit}', [UnitController::class, 'destroy'])->name('manage-unit.destroy');
 
-    // ==========================================
+// ==========================================
     // MANAGE ASSET (Route statis ditaruh di atas)
     // ==========================================
+    Route::get('/manage-asset/history', [AssetController::class, 'history'])->name('manage-asset.history');
     Route::get('manage-asset/create', [AssetController::class, 'create'])->name('manage-asset.create');
     Route::get('manage-asset/import', [AssetController::class, 'importForm'])->name('manage-asset.import.form');
     Route::post('manage-asset/import', [AssetController::class, 'import'])->name('manage-asset.import');
@@ -67,9 +68,9 @@ Route::middleware('auth')->group(function () {
     
     Route::get('manage-asset', [AssetController::class, 'index'])->name('manage-asset');
     Route::get('manage-asset/{gi}/kms', [AssetController::class, 'calculateKms'])->name('manage-asset.kms');
-    Route::get('manage-asset/{suttLine}', [AssetController::class, 'show'])->name('manage-asset.show');
-    Route::delete('manage-asset/{asset}', [AssetController::class, 'destroy'])->name('manage-asset.destroy');
     Route::get('manage-asset/tower/{tower}/edit', [AssetController::class, 'editTower'])->name('manage-asset.tower.edit');
     Route::patch('manage-asset/tower/{tower}', [AssetController::class, 'updateTower'])->name('manage-asset.tower.update');
     Route::delete('manage-asset/tower/{tower}', [AssetController::class, 'destroyTower'])->name('manage-asset.tower.destroy');
+    Route::get('manage-asset/{suttLine}', [AssetController::class, 'show'])->name('manage-asset.show');
+    Route::delete('manage-asset/{asset}', [AssetController::class, 'destroy'])->name('manage-asset.destroy');
 });

@@ -17,6 +17,39 @@ class Unit extends Model
         'longitude' => 'float',
     ];
 
+    /** Accessor untuk mendapatkan nama Unit Level 1 */
+    public function getLevel1NameAttribute(): string
+    {
+        return match ((int) $this->level) {
+            1 => $this->name,
+            2 => $this->parent?->name ?? '—',
+            3 => $this->parent?->parent?->name ?? '—',
+            4 => $this->parent?->parent?->parent?->name ?? '—',
+            default => '—',
+        };
+    }
+
+    /** Accessor untuk mendapatkan nama Unit Level 2 */
+    public function getLevel2NameAttribute(): string
+    {
+        return match ((int) $this->level) {
+            2 => $this->name,
+            3 => $this->parent?->name ?? '—',
+            4 => $this->parent?->parent?->name ?? '—',
+            default => '—',
+        };
+    }
+
+    /** Accessor untuk mendapatkan nama Unit Level 3 */
+    public function getLevel3NameAttribute(): string
+    {
+        return match ((int) $this->level) {
+            3 => $this->name,
+            4 => $this->parent?->name ?? '—',
+            default => '—',
+        };
+    }
+
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Unit::class, 'parent_id');

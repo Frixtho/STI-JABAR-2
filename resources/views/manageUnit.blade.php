@@ -3,100 +3,6 @@
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
 
-    {{-- ===================== SIDEBAR ===================== --}}
-    <aside class="hidden lg:flex lg:flex-col lg:w-60 bg-pln-800 text-white shrink-0">
-        <div class="px-6 py-6">
-            <p class="font-bold text-lg leading-tight">PLN Financial</p>
-            <p class="text-[10px] tracking-[0.2em] text-accent-400">UTILITY MANAGEMENT</p>
-        </div>
-
-        <nav class="flex-1 px-4 space-y-1 mt-2">
-            <a href="{{ route('dashboard') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium {{ request()->routeIs('dashboard') ? 'bg-white/10 text-white' : 'text-pln-100 hover:bg-white/5' }}">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
-                </svg>
-                Dashboard
-            </a>
-
-            @php
-                $adminActive = request()->routeIs('manage-user*') || request()->routeIs('manage-unit*');
-            @endphp
-
-            <div>
-                <button type="button" id="adminMenuToggle"
-                    class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium {{ $adminActive ? 'text-white bg-white/5' : 'text-pln-100 hover:bg-white/5' }}">
-                    <span class="flex items-center gap-3">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0" />
-                        </svg>
-                        Admin
-                    </span>
-                    <svg id="adminMenuChevron" class="w-3.5 h-3.5 transition-transform duration-200 {{ $adminActive ? 'rotate-180' : '' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                    </svg>
-                </button>
-                <div id="adminSubmenu" class="{{ $adminActive ? '' : 'hidden' }} ml-7 mt-1 border-l border-white/10 pl-3 space-y-1">
-                    <a href="{{ route('manage-user') }}"
-                       class="relative block px-2 py-2 text-sm {{ request()->routeIs('manage-user*') ? 'text-white font-medium before:absolute before:-left-[13px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-accent-400 before:rounded-r' : 'text-pln-100 hover:text-white' }}">
-                        Manage User
-                    </a>
-                    <a href="{{ route('manage-unit') }}"
-                       class="relative block px-2 py-2 text-sm {{ request()->routeIs('manage-unit*') ? 'text-white font-medium before:absolute before:-left-[13px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-accent-400 before:rounded-r' : 'text-pln-100 hover:text-white' }}">
-                        Manage Unit
-                    </a>
-                    <a href="{{ route('manage-asset') }}"
-                       class="relative block px-2 py-2 text-sm {{ request()->routeIs('manage-asset*') ? 'text-white font-medium before:absolute before:-left-[13px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-accent-400 before:rounded-r' : 'text-pln-100 hover:text-white' }}">
-                        Manage Asset
-                    </a>
-                </div>
-            </div>
-
-            <a href="{{ route('settings') }}"
-               class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium {{ request()->routeIs('settings*') ? 'bg-white/10 text-white' : 'text-pln-100 hover:bg-white/5' }}">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 0 1 0 .255c-.007.378.138.751.43.991l1.005.828c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 0 1 0-.255c.007-.378-.138-.751-.43-.991l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.281Z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                </svg>
-                Settings
-            </a>
-        </nav>
-
-        <div class="p-4 border-t border-white/10">
-            <div class="flex items-center gap-3 px-2 py-2 rounded-md bg-white/5">
-                <div class="w-8 h-8 rounded-full bg-accent-400 text-pln-800 font-bold text-xs flex items-center justify-center uppercase shrink-0">
-                    {{ implode('', array_map(fn($w) => $w[0] ?? '', array_slice(explode(' ', auth()->user()->name), 0, 2))) }}
-                </div>
-                <div class="leading-tight min-w-0">
-                    <p class="text-sm font-semibold text-white truncate">{{ auth()->user()->name }}</p>
-                    <p class="text-[11px] text-pln-100/70 truncate">{{ auth()->user()->email }}</p>
-                    <span class="inline-flex items-center mt-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded
-                        {{ strcasecmp(auth()->user()->role, 'Admin') === 0 ? 'bg-accent-400 text-pln-800' : 'bg-white/10 text-pln-100' }}">
-                        {{ auth()->user()->role }}
-                    </span>
-                </div>
-            </div>
-            <div class="mt-3 space-y-1">
-                <a href="#" class="flex items-center gap-2 px-2 py-1.5 text-sm text-pln-100 hover:text-white">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <circle cx="12" cy="12" r="9" stroke-linecap="round" stroke-linejoin="round" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9.5 9a2.5 2.5 0 1 1 3.5 2.29c-.7.32-1 .8-1 1.71M12 17h.01" />
-                    </svg>
-                    Help
-                </a>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-pln-100 hover:text-white">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 9V5.25A2.25 2.25 0 0 1 10.5 3h6a2.25 2.25 0 0 1 2.25 2.25v13.5A2.25 2.25 0 0 1 16.5 21h-6a2.25 2.25 0 0 1-2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-                        </svg>
-                        Logout
-                    </button>
-                </form>
-            </div>
-        </div>
-    </aside>
-
     {{-- ===================== MAIN CONTENT ===================== --}}
     <div class="flex-1 min-w-0">
 
@@ -216,89 +122,144 @@
             </div>
 
             {{-- ===================== TABLE ===================== --}}
-            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            {{-- ===================== TABLE ===================== --}}
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
-                <div class="grid grid-cols-6 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    <div>Nama Unit</div>
-                    <div>Level</div>
-                    <div class="col-span-2">Posisi Hierarki</div>
-                    <div>Koordinat</div>
-                    <div class="text-center">Action</div>
-                </div>
-
-                <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                    @forelse ($units as $unit)
-                        <div class="grid grid-cols-6 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
-                            <div class="font-semibold text-[#004A54] dark:text-accent-400">{{ $unit->name }}</div>
-
-                            <div>
-                                <span class="px-2 py-1 text-xs font-semibold rounded-md
-                                    {{ $unit->level == 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300' : '' }}
-                                    {{ $unit->level == 2 ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300' : '' }}
-                                    {{ $unit->level == 3 ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300' : '' }}
-                                    {{ $unit->level == 4 ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' : '' }}">
-                                    Level {{ $unit->level }}
-                                </span>
-                            </div>
-
-                            <div class="col-span-2 text-xs text-gray-500 dark:text-gray-400 truncate">
-                                {{ $unit->pathLabel() }}
-                            </div>
-
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                @if ($unit->latitude && $unit->longitude)
-                                    {{ $unit->latitude }}, {{ $unit->longitude }}
-                                @else
-                                    <span class="italic text-gray-300 dark:text-gray-600">belum ada</span>
-                                @endif
-                            </div>
-
-                            <div class="flex items-center justify-center gap-2">
-                                @if ($unit->level == 4 && $unit->latitude && $unit->longitude)
-                                    <button type="button" class="distance-btn text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                        data-url="{{ route('manage-unit.distance', $unit) }}" title="Hitung jarak ke UPT Bandung">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                        </svg>
-                                    </button>
-                                @endif
-                                <a href="{{ route('manage-unit.edit', $unit) }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                    </svg>
-                                </a>
-                                <form action="{{ route('manage-unit.destroy', $unit) }}" method="POST" onsubmit="return confirm('Hapus unit {{ $unit->name }}?')" class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none">
-                                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                        </svg>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="p-12 text-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800">
-                            <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
-                            Belum ada data unit yang cocok ditemukan.
-                        </div>
-                    @endforelse
-                </div>
-
-                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                        Menampilkan {{ $units->firstItem() ?? 0 }} - {{ $units->lastItem() ?? 0 }} dari {{ $units->total() }} unit
-                    </div>
-                    <div class="laravel-pagination">
-                        {{ $units->onEachSide(-1)->links() }}
-                    </div>
-                </div>
+            {{-- Header Tabel dengan 7 Kolom sesuai Mockup --}}
+            <div class="grid grid-cols-12 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 items-center">
+                <div class="col-span-3">Nama Unit</div>
+                <div class="col-span-1">Level</div>
+                <div class="col-span-1">Lv 1</div>
+                <div class="col-span-1">Lv 2</div>
+                <div class="col-span-1">Lv 3</div>
+                <div class="col-span-3">Koordinat</div>
+                <div class="col-span-2 text-center">Action</div>
             </div>
 
-        </main>
+            <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                @forelse ($units as $unit)
+                    @php
+                        $lvl1Name = '—';
+                        $lvl2Name = '—';
+                        $lvl3Name = '—';
+
+                        if ($unit->level == 1) {
+                            $lvl1Name = $unit->name;
+                        } elseif ($unit->level == 2) {
+                            $lvl2Name = $unit->name; // Nama unit Level 2 masuk ke kolom Lv 2
+                            if ($unit->parent) {
+                                $lvl1Name = $unit->parent->name; // Jika punya induk Level 1
+                            }
+                        } elseif ($unit->level == 3) {
+                            $lvl3Name = $unit->name; // Nama unit Level 3 masuk ke kolom Lv 3
+                            if ($unit->parent) {
+                                $lvl2Name = $unit->parent->name; // Induknya masuk ke Lv 2
+                                if ($unit->parent->parent) {
+                                    $lvl1Name = $unit->parent->parent->name; // Induknya lagi masuk ke Lv 1
+                                }
+                            }
+                        } elseif ($unit->level == 4) {
+                            // Jika Level 4 (GI/GIS, dll), diasumsikan parent-nya Level 3 (ULP/ULTG)
+                            if ($unit->parent) {
+                                $lvl3Name = $unit->parent->name;
+                                if ($unit->parent->parent) {
+                                    $lvl2Name = $unit->parent->parent->name;
+                                    if ($unit->parent->parent->parent) {
+                                        $lvl1Name = $unit->parent->parent->parent->name;
+                                    }
+                                }
+                            }
+                        }
+                    @endphp
+
+                    <div class="grid grid-cols-12 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
+                        
+                        {{-- Nama Unit --}}
+                        <div class="col-span-3 font-semibold text-[#004A54] dark:text-accent-400">
+                            {{ $unit->name }}
+                        </div>
+
+                        {{-- Level Badge --}}
+                        <div class="col-span-1">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-md
+                                {{ $unit->level == 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300' : '' }}
+                                {{ $unit->level == 2 ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300' : '' }}
+                                {{ $unit->level == 3 ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300' : '' }}
+                                {{ $unit->level == 4 ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' : '' }}">
+                                Level {{ $unit->level }}
+                            </span>
+                        </div>
+
+                        {{-- Kolom Lv 1 --}}
+                        <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
+                            {{ $lvl1Name }}
+                        </div>
+
+                        {{-- Kolom Lv 2 --}}
+                        <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
+                            {{ $lvl2Name }}
+                        </div>
+
+                        {{-- Kolom Lv 3 --}}
+                        <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
+                            {{ $lvl3Name }}
+                        </div>
+
+                        {{-- Koordinat --}}
+                        <div class="col-span-3 text-xs text-gray-500 dark:text-gray-400">
+                            @if ($unit->latitude && $unit->longitude)
+                                {{ $unit->latitude }}, {{ $unit->longitude }}
+                            @else
+                                <span class="italic text-gray-300 dark:text-gray-600">belum ada</span>
+                            @endif
+                        </div>
+
+                        {{-- Action Buttons --}}
+                        <div class="col-span-2 flex items-center justify-center gap-1.5">
+                            @if ($unit->latitude && $unit->longitude)
+                                <button type="button" class="distance-btn text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                    data-url="{{ route('manage-unit.distance', $unit) }}" title="Hitung Jarak">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                    </svg>
+                                </button>
+                            @endif
+                            <a href="{{ route('manage-unit.edit', $unit) }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Edit">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                </svg>
+                            </a>
+                            <form action="{{ route('manage-unit.destroy', $unit) }}" method="POST" onsubmit="return confirm('Hapus unit {{ $unit->name }}?')" class="inline-block">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none" title="Hapus">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @empty
+                    <div class="p-12 text-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800">
+                        <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        Belum ada data unit yang cocok ditemukan.
+                    </div>
+                @endforelse
+            </div>
+
+            {{-- Footer Pagination --}}
+            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                    Menampilkan {{ $units->firstItem() ?? 0 }} - {{ $units->lastItem() ?? 0 }} dari {{ $units->total() }} unit
+                </div>
+                <div class="laravel-pagination">
+                    {{ $units->onEachSide(-1)->links() }}
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

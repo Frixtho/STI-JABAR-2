@@ -143,32 +143,20 @@
                         $lvl2Name = '—';
                         $lvl3Name = '—';
 
-                        if ($unit->level == 1) {
-                            $lvl1Name = $unit->name;
-                        } elseif ($unit->level == 2) {
-                            $lvl2Name = $unit->name; // Nama unit Level 2 masuk ke kolom Lv 2
-                            if ($unit->parent) {
-                                $lvl1Name = $unit->parent->name; // Jika punya induk Level 1
-                            }
+                        if ($unit->level == 2) {
+                            // UPT
+                            $lvl1Name = optional($unit->parent)->name ?? '—';
+
                         } elseif ($unit->level == 3) {
-                            $lvl3Name = $unit->name; // Nama unit Level 3 masuk ke kolom Lv 3
-                            if ($unit->parent) {
-                                $lvl2Name = $unit->parent->name; // Induknya masuk ke Lv 2
-                                if ($unit->parent->parent) {
-                                    $lvl1Name = $unit->parent->parent->name; // Induknya lagi masuk ke Lv 1
-                                }
-                            }
+                            // ULTG / ULP
+                            $lvl2Name = optional($unit->parent)->name ?? '—';
+                            $lvl1Name = optional(optional($unit->parent)->parent)->name ?? '—';
+
                         } elseif ($unit->level == 4) {
-                            // Jika Level 4 (GI/GIS, dll), diasumsikan parent-nya Level 3 (ULP/ULTG)
-                            if ($unit->parent) {
-                                $lvl3Name = $unit->parent->name;
-                                if ($unit->parent->parent) {
-                                    $lvl2Name = $unit->parent->parent->name;
-                                    if ($unit->parent->parent->parent) {
-                                        $lvl1Name = $unit->parent->parent->parent->name;
-                                    }
-                                }
-                            }
+                            // GI
+                            $lvl3Name = optional($unit->parent)->name ?? '—';
+                            $lvl2Name = optional(optional($unit->parent)->parent)->name ?? '—';
+                            $lvl1Name = optional(optional(optional($unit->parent)->parent)->parent)->name ?? '—';
                         }
                     @endphp
 
@@ -256,7 +244,7 @@
                     Menampilkan {{ $units->firstItem() ?? 0 }} - {{ $units->lastItem() ?? 0 }} dari {{ $units->total() }} unit
                 </div>
                 <div class="laravel-pagination">
-                    {{ $units->onEachSide(-1)->links() }}
+                    {{ $units->onEachSide(0)->links() }}
                 </div>
             </div>
         </div>

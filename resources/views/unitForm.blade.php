@@ -85,9 +85,15 @@
                 <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-6">
 
                     @if ($unit)
-                        {{-- Mode edit: form disederhanakan, cuma Nama, Functloc, Latitude, Longitude --}}
+                        {{-- Mode edit: Nama, Functloc, Induk Unit (dinamis sesuai level), Latitude, Longitude --}}
                         <input type="hidden" name="level" value="{{ $unit->level }}">
-                        <input type="hidden" name="parent_id" value="{{ $unit->parent_id }}">
+
+                        @php
+                            // GI (level 4) langsung ke UPT (level 2, skip ULTG).
+                            // Level lain: induknya level di atasnya langsung.
+                            $parentLevel = $unit->level == 4 ? 2 : $unit->level - 1;
+                            $parentLevelLabels = [1 => 'UIT', 2 => 'UPT', 3 => 'ULTG'];
+                        @endphp
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
@@ -101,6 +107,23 @@
                                     class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
                             </div>
                         </div>
+
+                        @if ($parentLevel >= 1)
+                            <div>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300">Induk Unit ({{ $parentLevelLabels[$parentLevel] ?? 'Level '.$parentLevel }})</label>
+                                <select name="parent_id"
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                                    <option value="">— Tidak ada —</option>
+                                    @foreach ($parentUnits as $p)
+                                        @continue($p->level != $parentLevel)
+                                        <option value="{{ $p->id }}" @selected(old('parent_id', $unit->parent_id) == $p->id)>{{ $p->name }}</option>
+                                    @endforeach
+                                </select>
+                                @if ($unit->level == 4)
+                                    <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">ULTG tidak perlu dipilih — GI ini diparent-kan langsung ke UPT.</p>
+                                @endif
+                            </div>
+                        @endif
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>

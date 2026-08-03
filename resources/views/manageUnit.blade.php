@@ -132,6 +132,7 @@
                 <div class="col-span-1">Lv 1</div>
                 <div class="col-span-1">Lv 2</div>
                 <div class="col-span-1">Lv 3</div>
+                <div class="col-span-1">LV 4</div>
                 <div class="col-span-3">Koordinat</div>
                 <div class="col-span-2 text-center">Action</div>
             </div>
@@ -142,6 +143,7 @@
                         $lvl1Name = '—';
                         $lvl2Name = '—';
                         $lvl3Name = '—';
+                        $lvl4Name = '—';
 
                         if ($unit->level == 2) {
                             // UPT
@@ -154,13 +156,13 @@
 
                         } elseif ($unit->level == 4) {
                             // GI
+                            $lvl4Name = $unit->name;
                             $lvl3Name = optional($unit->parent)->name ?? '—';
                             $lvl2Name = optional(optional($unit->parent)->parent)->name ?? '—';
                             $lvl1Name = optional(optional(optional($unit->parent)->parent)->parent)->name ?? '—';
                         }
                     @endphp
-
-                    <div class="grid grid-cols-12 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
+                        <div class="grid grid-cols-12 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
                         
                         {{-- Nama Unit --}}
                         <div class="col-span-3 font-semibold text-[#004A54] dark:text-accent-400">
@@ -193,8 +195,13 @@
                             {{ $lvl3Name }}
                         </div>
 
+                        {{-- Kolom Lv 4 --}}
+                        <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
+                            {{ $lvl4Name }}
+                        </div>
+
                         {{-- Koordinat --}}
-                        <div class="col-span-3 text-xs text-gray-500 dark:text-gray-400">
+                        <div class="col-span-2 text-xs text-gray-500 dark:text-gray-400">
                             @if ($unit->latitude && $unit->longitude)
                                 {{ $unit->latitude }}, {{ $unit->longitude }}
                             @else

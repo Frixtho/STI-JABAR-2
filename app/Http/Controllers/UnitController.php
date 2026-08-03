@@ -246,11 +246,6 @@ class UnitController extends Controller
 
             $dataLines = array_slice($fileLines, $headerLineIndex + 1);
 
-            // Variabel penyimpan konteks hierarki terakhir agar baris di bawahnya yang kolom kirinya kosong bisa mewarisi induk di atasnya
-            $currentLv1Id = null;
-            $currentLv2Id = null;
-            $currentLv3Id = null;
-
             foreach ($dataLines as $line) {
                 $row = str_getcsv($line);
                 if (empty(array_filter($row))) continue;
@@ -269,23 +264,73 @@ class UnitController extends Controller
                 $parentId = null;
 
                 // Tentukan baris ini masuk level berapa berdasarkan kolom mana yang terisi
-                if (!empty($valLv4) && $valLv4 !== '-') {
-                    $unitName = $valLv4;
-                    $level = 4;
-                    $parentId = $currentLv3Id ?? $currentLv2Id ?? $currentLv1Id;
-                } elseif (!empty($valLv3) && $valLv3 !== '-') {
-                    $unitName = $valLv3;
-                    $level = 3;
-                    $parentId = $currentLv2Id ?? $currentLv1Id;
-                } elseif (!empty($valLv2) && $valLv2 !== '-') {
-                    $unitName = $valLv2;
-                    $level = 2;
-                    $parentId = $currentLv1Id;
-                } elseif (!empty($valLv1) && $valLv1 !== '-') {
-                    $unitName = $valLv1;
-                    $level = 1;
+                if (!empty($valLv1) && $valLv1 !== '-') {
+
+                        $uit = Unit::updateOrCreate(
+                            ['name' => trim($valLv1), 'level' => 1],
+                            ['type' => 'uit']
+                        );
+
+                        $currentLv1Id = $uit->id;
+                        $currentLv2Id = null;
+                        $currentLv3Id = null;
+                    }
+
+                    if (!empty($valLv2) && $valLv2 !== '-') {
+
+                        $upt = Unit::updateOrCreate(
+                            ['name' => trim($valLv2), 'level' => 2],
+                            [
+                                'parent_id' => $currentLv1Id,
+                                'type' => 'upt',
+                            ]
+                        );
+
+                        $currentLv2Id = $upt->id;
+                        $currentLv3Id = null;
+                    }
+
+                    if (!empty($valLv3) && $valLv3 !== '-') {
+
+                        $ultg = Unit::updateOrCreate(
+                            ['name' => trim($valLv3), 'level' => 3],
+                            [
+                                'parent_id' => $currentLv2Id,
+                                'type' => 'ultg',
+                            ]
+                        );
+
+                        $currentLv3Id = $ultg->id;
+                    }
+
+                    $unitName = null;
+                    $level = null;
                     $parentId = null;
-                }
+
+                    if (!empty($valLv4) && $valLv4 !== '-') {
+
+                        $unitName = trim($valLv4);
+                        $level = 4;
+                        $parentId = $currentLv3Id;
+
+                    } elseif (!empty($valLv3) && $valLv3 !== '-') {
+
+                        $unitName = trim($valLv3);
+                        $level = 3;
+                        $parentId = $currentLv2Id;
+
+                    } elseif (!empty($valLv2) && $valLv2 !== '-') {
+
+                        $unitName = trim($valLv2);
+                        $level = 2;
+                        $parentId = $currentLv1Id;
+
+                    } elseif (!empty($valLv1) && $valLv1 !== '-') {
+
+                        $unitName = trim($valLv1);
+                        $level = 1;
+                        $parentId = null;
+                    }
 
                 if (empty($unitName) || $unitName === '-') {
                     $skipped++;
@@ -329,10 +374,13 @@ class UnitController extends Controller
 
                 // Simpan atau update unit ke database
                 $unit = Unit::updateOrCreate(
-                    ['name' => $unitName, 'level' => $level],
+                    [
+                        'name' => $unitName,
+                        'level' => $level,
+                    ],
                     [
                         'code' => $code,
-                        'parent_id' => $parentId ?? ($defaultUpt ? $defaultUpt->id : null),
+                        'parent_id' => $parentId,
                         'latitude' => !empty($lat) ? (float) $lat : null,
                         'longitude' => !empty($lng) ? (float) $lng : null,
                         'type' => $type,

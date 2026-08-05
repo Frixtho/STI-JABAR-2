@@ -99,13 +99,13 @@
 
                     <div class="flex items-center gap-2 shrink-0">
                         <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Level:</label>
-                        <div class="relative w-32">
+                        <div class="relative w-40">
                             <select name="level" onchange="this.form.submit()" class="w-full appearance-none rounded-lg border border-gray-300 dark:border-gray-600 py-2 pl-3 pr-7 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] cursor-pointer">
                                 <option value="">Semua Level</option>
-                                <option value="1" @selected(request('level') == '1')>Lvl 1 — UIT</option>
-                                <option value="2" @selected(request('level') == '2')>Lvl 2 — UPT</option>
-                                <option value="3" @selected(request('level') == '3')>Lvl 3 — ULTG</option>
-                                <option value="4" @selected(request('level') == '4')>Lvl 4 — GI</option>
+                                <option value="1" @selected(request('level') == '1')>Lvl 1 — UID/UIP/Pusharlis</option>
+                                <option value="2" @selected(request('level') == '2')>Lvl 2 — UP3/UPT/etc</option>
+                                <option value="3" @selected(request('level') == '3')>Lvl 3 — ULP/ULTG</option>
+                                <option value="4" @selected(request('level') == '4')>Lvl 4 — GI/GIS/etc</option>
                             </select>
                             <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-400">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
@@ -122,139 +122,142 @@
             </div>
 
             {{-- ===================== TABLE ===================== --}}
-            {{-- ===================== TABLE ===================== --}}
-        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
-            {{-- Header Tabel dengan 7 Kolom sesuai Mockup --}}
-            <div class="grid grid-cols-12 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 items-center">
-                <div class="col-span-3">Nama Unit</div>
-                <div class="col-span-1">Level</div>
-                <div class="col-span-1">Lv 1</div>
-                <div class="col-span-1">Lv 2</div>
-                <div class="col-span-1">Lv 3</div>
-                <div class="col-span-1">LV 4</div>
-                <div class="col-span-3">Koordinat</div>
-                <div class="col-span-2 text-center">Action</div>
-            </div>
+                {{-- Header Tabel --}}
+                <div class="grid grid-cols-12 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 items-center">
+                    <div class="col-span-3">Nama Unit</div>
+                    <div class="col-span-1">Level</div>
+                    <div class="col-span-1">Lv 1</div>
+                    <div class="col-span-1">Lv 2</div>
+                    <div class="col-span-1">Lv 3</div>
+                    <div class="col-span-1">Lv 4</div>
+                    <div class="col-span-2">Koordinat</div>
+                    <div class="col-span-2 text-center">Action</div>
+                </div>
 
-            <div class="divide-y divide-gray-200 dark:divide-gray-700">
-                @forelse ($units as $unit)
-                    @php
-                        $lvl1Name = '—';
-                        $lvl2Name = '—';
-                        $lvl3Name = '—';
-                        $lvl4Name = '—';
+                <div class="divide-y divide-gray-200 dark:divide-gray-700">
+                    @forelse ($units as $unit)
+                        @php
+                            $lvl1Name = '—';
+                            $lvl2Name = '—';
+                            $lvl3Name = '—';
+                            $lvl4Name = '—';
 
-                        if ($unit->level == 2) {
-                            // UPT
-                            $lvl1Name = optional($unit->parent)->name ?? '—';
+                            if ($unit->level == 1) {
+                                $lvl1Name = $unit->name;
+                            } elseif ($unit->level == 2) {
+                                // Level 2: Kolom LV 1 diisi parent utamanya, kolom LV 2 dikosongkan/dash karena unit ini berada di level 2
+                                $lvl1Name = optional($unit->parent)->name ?? ($unit->lv1 ?? '—');
+                                $lvl2Name = '—'; 
+                            } elseif ($unit->level == 3) {
+                                // Level 3: Kolom LV 1 diisi grand-parent, Kolom LV 2 diisi parent langsungnya (misal UP3/UPT), kolom LV 3 dikosongkan
+                                $lvl1Name = optional(optional($unit->parent)->parent)->name ?? '—';
+                                $lvl2Name = optional($unit->parent)->name ?? '—';
+                                $lvl3Name = '—';
+                            } elseif ($unit->level == 4) {
+                                // Level 4: Kolom LV 1, LV 2, LV 3 diisi sesuai hierarki di atasnya
+                                $lvl1Name = optional(optional(optional($unit->parent)->parent)->parent)->name ?? '—';
+                                $lvl2Name = optional(optional($unit->parent)->parent)->name ?? '—';
+                                $lvl3Name = optional($unit->parent)->name ?? '—';
+                                $lvl4Name = '—';
+                            }
+                        @endphp
 
-                        } elseif ($unit->level == 3) {
-                            // ULTG / ULP
-                            $lvl2Name = optional($unit->parent)->name ?? '—';
-                            $lvl1Name = optional(optional($unit->parent)->parent)->name ?? '—';
-
-                        } elseif ($unit->level == 4) {
-                            // GI
-                            $lvl4Name = $unit->name;
-                            $lvl3Name = optional($unit->parent)->name ?? '—';
-                            $lvl2Name = optional(optional($unit->parent)->parent)->name ?? '—';
-                            $lvl1Name = optional(optional(optional($unit->parent)->parent)->parent)->name ?? '—';
-                        }
-                    @endphp
                         <div class="grid grid-cols-12 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
-                        
-                        {{-- Nama Unit --}}
-                        <div class="col-span-3 font-semibold text-[#004A54] dark:text-accent-400">
-                            {{ $unit->name }}
-                        </div>
+                            
+                            {{-- Nama Unit --}}
+                            <div class="col-span-3 font-semibold text-[#004A54] dark:text-accent-400">
+                                {{ $unit->name }}
+                            </div>
 
-                        {{-- Level Badge --}}
-                        <div class="col-span-1">
-                            <span class="px-2 py-1 text-xs font-semibold rounded-md
-                                {{ $unit->level == 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300' : '' }}
-                                {{ $unit->level == 2 ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300' : '' }}
-                                {{ $unit->level == 3 ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300' : '' }}
-                                {{ $unit->level == 4 ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' : '' }}">
-                                Level {{ $unit->level }}
-                            </span>
-                        </div>
+                            {{-- Level Badge --}}
+                            <div class="col-span-1">
+                                <span class="px-2 py-1 text-xs font-semibold rounded-md
+                                    {{ $unit->level == 1 ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300' : '' }}
+                                    {{ $unit->level == 2 ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300' : '' }}
+                                    {{ $unit->level == 3 ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300' : '' }}
+                                    {{ $unit->level == 4 ? 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300' : '' }}">
+                                    Level {{ $unit->level }}
+                                </span>
+                            </div>
 
-                        {{-- Kolom Lv 1 --}}
-                        <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
-                            {{ $lvl1Name }}
-                        </div>
+                            {{-- Kolom Lv 1 --}}
+                            <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
+                                {{ $lvl1Name }}
+                            </div>
 
-                        {{-- Kolom Lv 2 --}}
-                        <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
-                            {{ $lvl2Name }}
-                        </div>
+                            {{-- Kolom Lv 2 --}}
+                            <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
+                                {{ $lvl2Name }}
+                            </div>
 
-                        {{-- Kolom Lv 3 --}}
-                        <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
-                            {{ $lvl3Name }}
-                        </div>
+                            {{-- Kolom Lv 3 --}}
+                            <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
+                                {{ $lvl3Name }}
+                            </div>
 
-                        {{-- Kolom Lv 4 --}}
-                        <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
-                            {{ $lvl4Name }}
-                        </div>
+                            {{-- Kolom Lv 4 --}}
+                            <div class="col-span-1 text-xs text-gray-600 dark:text-gray-300 truncate pr-2">
+                                {{ $lvl4Name }}
+                            </div>
 
-                        {{-- Koordinat --}}
-                        <div class="col-span-2 text-xs text-gray-500 dark:text-gray-400">
-                            @if ($unit->latitude && $unit->longitude)
-                                {{ $unit->latitude }}, {{ $unit->longitude }}
-                            @else
-                                <span class="italic text-gray-300 dark:text-gray-600">belum ada</span>
-                            @endif
-                        </div>
+                            {{-- Koordinat --}}
+                            <div class="col-span-2 text-xs text-gray-500 dark:text-gray-400">
+                                @if ($unit->latitude && $unit->longitude)
+                                    {{ $unit->latitude }}, {{ $unit->longitude }}
+                                @else
+                                    <span class="italic text-gray-300 dark:text-gray-600">belum ada</span>
+                                @endif
+                            </div>
 
-                        {{-- Action Buttons --}}
-                        <div class="col-span-2 flex items-center justify-center gap-1.5">
-                            @if ($unit->latitude && $unit->longitude)
-                                <button type="button" class="distance-btn text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                                    data-url="{{ route('manage-unit.distance', $unit) }}" title="Hitung Jarak">
+                            {{-- Action Buttons --}}
+                            <div class="col-span-2 flex items-center justify-center gap-1.5">
+                                @if ($unit->latitude && $unit->longitude)
+                                    <button type="button" class="distance-btn text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                                        data-url="{{ route('manage-unit.distance', $unit) }}" title="Hitung Jarak">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                        </svg>
+                                    </button>
+                                @endif
+                                <a href="{{ route('manage-unit.edit', $unit) }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Edit">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                     </svg>
-                                </button>
-                            @endif
-                            <a href="{{ route('manage-unit.edit', $unit) }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" title="Edit">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                </svg>
-                            </a>
-                            <form action="{{ route('manage-unit.destroy', $unit) }}" method="POST" onsubmit="return confirm('Hapus unit {{ $unit->name }}?')" class="inline-block">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none" title="Hapus">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
-                            </form>
+                                </a>
+                                <form action="{{ route('manage-unit.destroy', $unit) }}" method="POST" onsubmit="return confirm('Hapus unit {{ $unit->name }}?')" class="inline-block">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none" title="Hapus">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </form>
+                            </div>
                         </div>
-                    </div>
-                @empty
-                    <div class="p-12 text-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800">
-                        <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                        </svg>
-                        Belum ada data unit yang cocok ditemukan.
-                    </div>
-                @endforelse
-            </div>
+                    @empty
+                        <div class="p-12 text-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800">
+                            <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            Belum ada data unit yang cocok ditemukan.
+                        </div>
+                    @endforelse
+                </div>
 
-            {{-- Footer Pagination --}}
-            <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                    Menampilkan {{ $units->firstItem() ?? 0 }} - {{ $units->lastItem() ?? 0 }} dari {{ $units->total() }} unit
-                </div>
-                <div class="laravel-pagination">
-                    {{ $units->onEachSide(0)->links() }}
+                {{-- Footer Pagination --}}
+                <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        Menampilkan {{ $units->firstItem() ?? 0 }} - {{ $units->lastItem() ?? 0 }} dari {{ $units->total() }} unit
+                    </div>
+                    <div class="laravel-pagination">
+                        {{ $units->onEachSide(0)->links() }}
+                    </div>
                 </div>
             </div>
-        </div>
+        </main>
     </div>
 </div>
 

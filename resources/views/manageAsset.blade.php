@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Manage Asset — PLN Financial'])
+@extends('layouts.app', ['title' => 'Manage ' . ($currentCategory->name ?? 'Asset') . ' — PLN Financial'])
 
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
@@ -15,7 +15,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="m20 20-3.5-3.5" />
                     </svg>
                 </span>
-                <input type="text" placeholder="Cari jalur SUTT atau data..."
+                <input type="text" placeholder="Cari data..."
                     class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-10 pr-3 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-pln-700 focus:bg-white dark:focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pln-700/20">
             </div>
 
@@ -61,14 +61,14 @@
                 <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
-                <span class="font-semibold text-gray-700 dark:text-gray-200">Manage Asset</span>
+                <span class="font-semibold text-gray-700 dark:text-gray-200">Manage Asset: {{ $currentCategory->name ?? '' }}</span>
             </nav>
 
             {{-- Header Title & Action Buttons --}}
             <div class="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <p class="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wider font-semibold">Manage Asset</p>
-                    <h1 class="text-xl font-bold text-pln-800 dark:text-white tracking-wide">Jalur SUTT</h1>
+                    <h1 class="text-xl font-bold text-pln-800 dark:text-white tracking-wide">{{ $currentCategory->name ?? 'Daftar Aset' }}</h1>
                 </div>
                 <div class="flex items-center gap-2">
                     <a href="{{ route('manage-asset.import.form') }}" class="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
@@ -88,76 +88,65 @@
 
             {{-- Filter & Cari --}}
             <div class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
-                <form method="GET" action="{{ route('manage-asset') }}" class="w-full flex flex-row flex-wrap items-center gap-4">
+                <form method="GET" action="{{ route('manage-asset.category', $currentCategory->slug ?? '') }}" class="w-full flex flex-row flex-wrap items-center gap-4">
                     <div class="flex-1 min-w-[200px] relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h12M4 18h8" />
                             </svg>
                         </div>
-                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama jalur SUTT..."
+                        <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari nama aset {{ $currentCategory->name ?? '' }}..."
                             class="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-9 pr-4 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] transition-colors">
                     </div>
 
-                    <div class="shrink-0 flex items-center gap-2">
-                        <label class="text-sm font-semibold text-gray-600 dark:text-gray-300 whitespace-nowrap">Tegangan:</label>
-                        <select name="tegangan" onchange="this.form.submit()"
-                            class="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-700 dark:text-gray-200 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] transition-colors">
-                            <option value="">Semua Tegangan</option>
-                            @foreach ($teganganOptions as $kv)
-                                <option value="{{ $kv }}" @selected($selectedTegangan == $kv)>{{ $kv }} kV</option>
-                            @endforeach
-                        </select>
-                    </div>
-
                     <div class="shrink-0">
-                        <a href="{{ route('manage-asset') }}" class="border-2 border-[#004A54] dark:border-accent-400 text-[#004A54] dark:text-accent-400 px-5 py-2 rounded-lg text-sm font-bold hover:bg-cyan-50/50 dark:hover:bg-gray-700 transition-all block text-center tracking-wide">
+                        <a href="{{ route('manage-asset.category', $currentCategory->slug ?? '') }}" class="border-2 border-[#004A54] dark:border-accent-400 text-[#004A54] dark:text-accent-400 px-5 py-2 rounded-lg text-sm font-bold hover:bg-cyan-50/50 dark:hover:bg-gray-700 transition-all block text-center tracking-wide">
                             Reset
                         </a>
                     </div>
                 </form>
             </div>
 
-            {{-- ===================== TABLE SUTT ===================== --}}
+            {{-- ===================== TABLE KHUSUS TOWER ===================== --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
-                {{-- Header kolom --}}
-                <div class="grid grid-cols-4 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    <div>Jalur SUTT</div>
-                    <div>Tegangan</div>
-                    <div>GI Awal</div>
-                    <div>GI Akhir</div>
+                {{-- Kolom Header Khusus Tower (Contoh: Menggunakan 5 Kolom) --}}
+                <div class="grid grid-cols-5 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <div>Nama Tower</div>
+                    <div>Tinggi (m)</div>
+                    <div>Lokasi / Koordinat</div>
+                    <div>Status</div>
+                    <div class="text-right">Aksi</div>
                 </div>
 
                 <div class="divide-y divide-gray-200 dark:divide-gray-700">
                     @forelse ($assets ?? [] as $asset)
-                        <div class="grid grid-cols-4 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
+                        <div class="grid grid-cols-5 items-center px-6 py-3.5 text-sm hover:bg-gray-50/50 dark:hover:bg-gray-700/40 transition-colors">
                             <div class="font-semibold text-[#004A54] dark:text-accent-400">
-                                <a href="{{ route('manage-asset.show', $asset->id) }}" class="hover:underline">
-                                    {{ $asset->name ?? '-' }}
-                                </a>
+                                {{ $asset->name ?? '-' }}
                             </div>
 
                             <div class="text-gray-600 dark:text-gray-300">
-                                <span class="px-2 py-1 text-xs font-semibold rounded bg-sky-100 dark:bg-sky-900/40 text-sky-800 dark:text-sky-300">
-                                    {{ $asset->tegangan ?? '-' }}
+                                {{ $asset->height ?? '-' }} Meter
+                            </div>
+
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ $asset->location ?? '-' }}
+                            </div>
+
+                            <div class="text-gray-600 dark:text-gray-300">
+                                <span class="px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
+                                    {{ $asset->status ?? 'Active' }}
                                 </span>
                             </div>
 
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ $asset->gi_awal_name ?? '-' }}
-                            </div>
-
-                            <div class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ $asset->gi_akhir_name ?? '-' }}
+                            <div class="text-right flex items-center justify-end gap-2">
+                                <a href="{{ route('manage-asset.destroy', $asset->id) }}" class="text-red-600 hover:text-red-800 text-xs font-semibold">Hapus</a>
                             </div>
                         </div>
                     @empty
                         <div class="p-12 text-center text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800">
-                            <svg class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
-                            Belum ada data jalur SUTT. Import lewat "Import Data" atau tambahkan secara manual.
+                            Belum ada data untuk kategori <strong>{{ $currentCategory->name ?? '' }}</strong>.
                         </div>
                     @endforelse
                 </div>
@@ -165,7 +154,7 @@
                 @if(isset($assets) && method_exists($assets, 'links'))
                     <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div class="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                            Menampilkan {{ $assets->firstItem() ?? 0 }} - {{ $assets->lastItem() ?? 0 }} dari {{ $assets->total() }} jalur
+                            Menampilkan {{ $assets->firstItem() ?? 0 }} - {{ $assets->lastItem() ?? 0 }} dari {{ $assets->total() }} data
                         </div>
                         <div class="laravel-pagination">
                             {{ $assets->onEachSide(1)->links() }}
@@ -177,18 +166,4 @@
         </main>
     </div>
 </div>
-
-<script>
-    // Sidebar admin submenu toggle
-    const adminMenuToggle = document.getElementById('adminMenuToggle');
-    const adminSubmenu = document.getElementById('adminSubmenu');
-    const adminMenuChevron = document.getElementById('adminMenuChevron');
-
-    if (adminMenuToggle && adminSubmenu) {
-        adminMenuToggle.addEventListener('click', () => {
-            adminSubmenu.classList.toggle('hidden');
-            adminMenuChevron.classList.toggle('rotate-180');
-        });
-    }
-</script>
 @endsection

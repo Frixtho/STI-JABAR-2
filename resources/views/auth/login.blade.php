@@ -141,11 +141,6 @@
                     </svg>
                     Login
                 </button>
-
-                <p class="text-center text-sm text-gray-500 pt-1">
-                    Don't have an account?
-                    <a href="{{ route('register') }}" class="text-pln-700 font-semibold hover:text-pln-800">Register Now</a>
-                </p>
             </form>
 
             <hr class="my-6 border-gray-100">

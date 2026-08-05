@@ -63,14 +63,40 @@
                     Dashboard
                 </a>
 
-                <!-- Manage Asset -->
-                <a href="{{ route('manage-asset') }}"
-                class="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium {{ request()->routeIs('manage-asset*') ? 'bg-white/10 text-white' : 'text-pln-100 hover:bg-white/5' }}">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                    </svg>
-                    Manage Asset
-                </a>
+                <!-- Manage Asset dengan Submenu Dinamis Berdasarkan Database -->
+                @php
+                    // Ambil kategori dari database secara dinamis untuk submenu
+                    $assetCategories = \App\Models\AssetCategory::all();
+                    
+                    // Cek apakah rute saat ini berada di area manage-asset
+                    $assetActive = request()->routeIs('manage-asset*') || request()->routeIs('manage-access-point*') || request()->routeIs('manage-tower*');
+                @endphp
+
+                <div>
+                    <button type="button" id="assetMenuToggle"
+                        class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium {{ $assetActive ? 'text-white bg-white/5' : 'text-pln-100 hover:bg-white/5' }}">
+                        <span class="flex items-center gap-3">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                            </svg>
+                            Manage Asset
+                        </span>
+                        <svg id="assetMenuChevron" class="w-3.5 h-3.5 transition-transform duration-200 {{ $assetActive ? 'rotate-180' : '' }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                        </svg>
+                    </button>
+                    
+                    <div id="assetSubmenu" class="{{ $assetActive ? '' : 'hidden' }} ml-7 mt-1 border-l border-white/10 pl-3 space-y-1">
+                        @forelse($assetCategories as $category)
+                            <a href="{{ route('manage-asset.category', $category->slug) }}"
+                            class="relative block px-2 py-2 text-sm {{ request()->is('manage-asset/' . $category->slug . '*') ? 'text-white font-medium before:absolute before:-left-[13px] before:top-1/2 before:-translate-y-1/2 before:w-1 before:h-5 before:bg-accent-400 before:rounded-r' : 'text-pln-100 hover:text-white' }}">
+                                {{ $category->name }}
+                            </a>
+                        @empty
+                            <span class="block px-2 py-2 text-xs text-pln-100/50 italic">Belum ada kategori</span>
+                        @endforelse
+                    </div>
+                </div>
 
                 <!-- Riwayat Perubahan (History) -->
                 <a href="{{ route('manage-asset.history') }}"
@@ -157,8 +183,6 @@
 
         <!-- MAIN CONTENT WRAPPER -->
         <div class="flex flex-col flex-1 h-full overflow-hidden">
-            
-
             <!-- PAGE CONTENT CONTAINER -->
             <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6">
                 @yield('content')
@@ -167,18 +191,33 @@
 
     </div>
 
-    <!-- Script untuk Toggle Submenu Admin -->
+    <!-- Script untuk Toggle Submenu Admin & Asset -->
     <script>
-        const adminMenuToggle = document.getElementById('adminMenuToggle');
-        const adminSubmenu = document.getElementById('adminSubmenu');
-        const adminMenuChevron = document.getElementById('adminMenuChevron');
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Skrip untuk Menu Asset
+            const assetToggle = document.getElementById('assetMenuToggle');
+            const assetSubmenu = document.getElementById('assetSubmenu');
+            const assetChevron = document.getElementById('assetMenuChevron');
 
-        if (adminMenuToggle) {
-            adminMenuToggle.addEventListener('click', () => {
-                adminSubmenu.classList.toggle('hidden');
-                adminMenuChevron.classList.toggle('rotate-180');
-            });
-        }
+            if (assetToggle) {
+                assetToggle.addEventListener('click', function () {
+                    assetSubmenu.classList.toggle('hidden');
+                    assetChevron.classList.toggle('rotate-180');
+                });
+            }
+
+            // 2. Skrip untuk Menu Admin
+            const adminToggle = document.getElementById('adminMenuToggle');
+            const adminSubmenu = document.getElementById('adminSubmenu');
+            const adminMenuChevron = document.getElementById('adminMenuChevron');
+
+            if (adminToggle) {
+                adminToggle.addEventListener('click', function () {
+                    adminSubmenu.classList.toggle('hidden');
+                    adminMenuChevron.classList.toggle('rotate-180');
+                });
+            }
+        });
     </script>
 </body>
 </html>

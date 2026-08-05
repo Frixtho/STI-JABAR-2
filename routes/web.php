@@ -7,6 +7,7 @@ use App\Http\Controllers\ManageUserController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\AssetController;
+use App\Http\Controllers\AccessPointController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -57,20 +58,38 @@ Route::middleware('auth')->group(function () {
     Route::patch('manage-unit/{unit}', [UnitController::class, 'update'])->name('manage-unit.update');
     Route::delete('manage-unit/{unit}', [UnitController::class, 'destroy'])->name('manage-unit.destroy');
 
-// ==========================================
-    // MANAGE ASSET (Route statis ditaruh di atas)
     // ==========================================
+    // MANAGE ASSET & KATEGORI DINAMIS
+    // ==========================================
+    // Rute statis ditaruh di atas sebelum parameter dinamis
     Route::get('/manage-asset/history', [AssetController::class, 'history'])->name('manage-asset.history');
     Route::get('manage-asset/create', [AssetController::class, 'create'])->name('manage-asset.create');
     Route::get('manage-asset/import', [AssetController::class, 'importForm'])->name('manage-asset.import.form');
     Route::post('manage-asset/import', [AssetController::class, 'import'])->name('manage-asset.import');
     Route::post('/manage-asset', [AssetController::class, 'store'])->name('manage-asset.store');
     
-    Route::get('manage-asset', [AssetController::class, 'index'])->name('manage-asset');
     Route::get('manage-asset/{gi}/kms', [AssetController::class, 'calculateKms'])->name('manage-asset.kms');
+    
+    // Rute Tower (Opsional, jika masih dipertahankan terpisah)
+    Route::get('manage-tower', [AssetController::class, 'indexTower'])->name('manage-tower');
     Route::get('manage-asset/tower/{tower}/edit', [AssetController::class, 'editTower'])->name('manage-asset.tower.edit');
     Route::patch('manage-asset/tower/{tower}', [AssetController::class, 'updateTower'])->name('manage-asset.tower.update');
     Route::delete('manage-asset/tower/{tower}', [AssetController::class, 'destroyTower'])->name('manage-asset.tower.destroy');
-    Route::get('manage-asset/{suttLine}', [AssetController::class, 'show'])->name('manage-asset.show');
+
+    // Rute Utama / Kategori Dinamis berdasarkan Slug (Contoh: /manage-asset/router, /manage-asset/tower, dll)
+    Route::get('manage-asset/{category:slug}', [AssetController::class, 'indexByCategory'])->name('manage-asset.category');
+
+    // Rute hapus aset universal
     Route::delete('manage-asset/{asset}', [AssetController::class, 'destroy'])->name('manage-asset.destroy');
+
+    // ==========================================
+    // MANAGE ACCESS POINT
+    // ==========================================
+    Route::get('manage-access-point/create', [AccessPointController::class, 'create'])->name('manage-access-point.create');
+    Route::post('manage-access-point', [AccessPointController::class, 'store'])->name('manage-access-point.store');
+    
+    Route::get('manage-access-point', [AccessPointController::class, 'index'])->name('manage-access-point');
+    Route::get('manage-access-point/{accessPoint}/edit', [AccessPointController::class, 'edit'])->name('manage-access-point.edit');
+    Route::patch('manage-access-point/{accessPoint}', [AccessPointController::class, 'update'])->name('manage-access-point.update');
+    Route::delete('/manage-access-point/{id}', [AccessPointController::class, 'destroy'])->name('manage-access-point.destroy');
 });

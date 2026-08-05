@@ -197,30 +197,28 @@ class UnitController extends Controller
             'default_upt_id.*' => ['nullable', 'exists:units,id'],
         ]);
 
-        $jenis = $request->input('jenis');
-        $defaultUptIds = $request->input('default_upt_id', []);
-
         $totalCreated = 0;
         $totalSkipped = 0;
         $allSkippedReasons = [];
 
         foreach ($request->file('files') as $index => $uploadedFile) {
             $path = $uploadedFile->getRealPath();
-            
-            $currentDefaultUptId = $defaultUptIds[$index] ?? ($defaultUptIds[0] ?? null);
-            $defaultUpt = $currentDefaultUptId ? Unit::find($currentDefaultUptId) : null;
-
             $fileLines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            
             if (empty($fileLines)) {
                 continue;
             }
 
-            // Cari baris header secara dinamis
+            // Cari baris header secara dinamis yang berisi kolom level atau koordinat
             $headerLineIndex = 0;
             $header = [];
             
             foreach ($fileLines as $i => $line) {
-                $cols = str_getcsv($line);
+                $cols = str_getcsv($line, ';'); // Pastikan menggunakan separator titik koma (;) sesuai file CSV Anda
+                if (count($cols) < 2) {
+                    $cols = str_getcsv($line, ','); // Fallback ke koma jika pakai format standar
+                }
+                
                 $cleanedCols = array_map(function($col) {
                     return strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $col)));
                 }, $cols);
@@ -233,7 +231,7 @@ class UnitController extends Controller
             }
 
             if (empty($header)) {
-                $rawHeaderData = str_getcsv($fileLines[0]);
+                $rawHeaderData = str_getcsv($fileLines[0], ';');
                 $header = array_map(function($col) {
                     return strtolower(trim(preg_replace('/^\xEF\xBB\xBF/', '', $col)));
                 }, $rawHeaderData);
@@ -246,14 +244,23 @@ class UnitController extends Controller
 
             $dataLines = array_slice($fileLines, $headerLineIndex + 1);
 
+            // Variabel penyimpan state hierarki yang berjalan antar baris
+            $currentLv1Id = null;
+            $currentLv2Id = null;
+            $currentLv3Id = null;
+
             foreach ($dataLines as $line) {
-                $row = str_getcsv($line);
+                $row = str_getcsv($line, ';');
+                if (count($row) < 2) {
+                    $row = str_getcsv($line, ',');
+                }
+                
                 if (empty(array_filter($row))) continue;
                 
                 $row = array_pad($row, count($header), null);
                 $raw = array_combine($header, $row);
 
-                // Tangkap nilai dari masing-masing kolom level secara fleksibel
+                // Tangkap nilai dari masing-masing kolom level
                 $valLv1 = trim($raw['lv 1'] ?? $raw['lv1'] ?? '');
                 $valLv2 = trim($raw['lv 2'] ?? $raw['lv2'] ?? '');
                 $valLv3 = trim($raw['lv 3'] ?? $raw['lv3'] ?? '');
@@ -263,85 +270,72 @@ class UnitController extends Controller
                 $level = null;
                 $parentId = null;
 
-                // Tentukan baris ini masuk level berapa berdasarkan kolom mana yang terisi
+                // 1. Proses Level 1 (UIT) jika ada
                 if (!empty($valLv1) && $valLv1 !== '-') {
+                    $uit = Unit::updateOrCreate(
+                        ['name' => $valLv1, 'level' => 1],
+                        ['type' => 'uit', 'parent_id' => null]
+                    );
+                    $currentLv1Id = $uit->id;
+                    $currentLv2Id = null;
+                    $currentLv3Id = null;
+                }
 
-                        $uit = Unit::updateOrCreate(
-                            ['name' => trim($valLv1), 'level' => 1],
-                            ['type' => 'uit']
-                        );
+                // 2. Proses Level 2 (UPT) jika ada
+                if (!empty($valLv2) && $valLv2 !== '-') {
+                    $upt = Unit::updateOrCreate(
+                        ['name' => $valLv2, 'level' => 2],
+                        [
+                            'parent_id' => $currentLv1Id,
+                            'type' => 'upt',
+                        ]
+                    );
+                    $currentLv2Id = $upt->id;
+                    $currentLv3Id = null;
+                }
 
-                        $currentLv1Id = $uit->id;
-                        $currentLv2Id = null;
-                        $currentLv3Id = null;
-                    }
+                // 3. Proses Level 3 (ULTG) jika ada
+                if (!empty($valLv3) && $valLv3 !== '-') {
+                    $ultg = Unit::updateOrCreate(
+                        ['name' => $valLv3, 'level' => 3],
+                        [
+                            'parent_id' => $currentLv2Id,
+                            'type' => 'ultg',
+                        ]
+                    );
+                    $currentLv3Id = $ultg->id;
+                }
 
-                    if (!empty($valLv2) && $valLv2 !== '-') {
-
-                        $upt = Unit::updateOrCreate(
-                            ['name' => trim($valLv2), 'level' => 2],
-                            [
-                                'parent_id' => $currentLv1Id,
-                                'type' => 'upt',
-                            ]
-                        );
-
-                        $currentLv2Id = $upt->id;
-                        $currentLv3Id = null;
-                    }
-
-                    if (!empty($valLv3) && $valLv3 !== '-') {
-
-                        $ultg = Unit::updateOrCreate(
-                            ['name' => trim($valLv3), 'level' => 3],
-                            [
-                                'parent_id' => $currentLv2Id,
-                                'type' => 'ultg',
-                            ]
-                        );
-
-                        $currentLv3Id = $ultg->id;
-                    }
-
-                    $unitName = null;
-                    $level = null;
+                // Tentukan baris ini sebagai unit aktif yang akan dimasukkan berdasarkan level terdalam yang terisi
+                if (!empty($valLv4) && $valLv4 !== '-') {
+                    $unitName = $valLv4;
+                    $level = 4;
+                    $parentId = $currentLv3Id ?? $currentLv2Id ?? $currentLv1Id; 
+                } elseif (!empty($valLv3) && $valLv3 !== '-') {
+                    $unitName = $valLv3;
+                    $level = 3;
+                    $parentId = $currentLv2Id ?? $currentLv1Id;
+                } elseif (!empty($valLv2) && $valLv2 !== '-') {
+                    $unitName = $valLv2;
+                    $level = 2;
+                    $parentId = $currentLv1Id;
+                } elseif (!empty($valLv1) && $valLv1 !== '-') {
+                    $unitName = $valLv1;
+                    $level = 1;
                     $parentId = null;
+                }
 
-                    if (!empty($valLv4) && $valLv4 !== '-') {
-
-                        $unitName = trim($valLv4);
-                        $level = 4;
-                        $parentId = $currentLv3Id;
-
-                    } elseif (!empty($valLv3) && $valLv3 !== '-') {
-
-                        $unitName = trim($valLv3);
-                        $level = 3;
-                        $parentId = $currentLv2Id;
-
-                    } elseif (!empty($valLv2) && $valLv2 !== '-') {
-
-                        $unitName = trim($valLv2);
-                        $level = 2;
-                        $parentId = $currentLv1Id;
-
-                    } elseif (!empty($valLv1) && $valLv1 !== '-') {
-
-                        $unitName = trim($valLv1);
-                        $level = 1;
-                        $parentId = null;
-                    }
-
+                // Jika nama unit kosong atau hanya strip '-', lewati baris tersebut
                 if (empty($unitName) || $unitName === '-') {
                     $skipped++;
                     $skippedReasons[] = 'Nama unit kosong pada salah satu baris.';
                     continue;
                 }
 
-                // Tangkap koordinat
+                // Tangkap koordinat Latitude & Longitude
                 $lng = null;
                 foreach (['lng', 'longitude', 'long'] as $key) {
-                    if (!empty($raw[$key] ?? null)) {
+                    if (!empty($raw[$key] ?? null) && trim($raw[$key]) !== '-') {
                         $lng = str_replace(',', '.', trim($raw[$key]));
                         break;
                     }
@@ -349,16 +343,16 @@ class UnitController extends Controller
 
                 $lat = null;
                 foreach (['lat', 'latitude'] as $key) {
-                    if (!empty($raw[$key] ?? null)) {
+                    if (!empty($raw[$key] ?? null) && trim($raw[$key]) !== '-') {
                         $lat = str_replace(',', '.', trim($raw[$key]));
                         break;
                     }
                 }
 
-                // Tangkap kode
+                // Tangkap kode / functloc
                 $code = null;
                 foreach (['code', 'kode', 'functloc'] as $key) {
-                    if (!empty($raw[$key] ?? null)) {
+                    if (!empty($raw[$key] ?? null) && trim($raw[$key]) !== '-') {
                         $code = trim($raw[$key]);
                         break;
                     }
@@ -372,8 +366,8 @@ class UnitController extends Controller
                     default => 'unit',
                 };
 
-                // Simpan atau update unit ke database
-                $unit = Unit::updateOrCreate(
+                // Simpan atau update unit ke database secara akurat
+                Unit::updateOrCreate(
                     [
                         'name' => $unitName,
                         'level' => $level,
@@ -381,23 +375,11 @@ class UnitController extends Controller
                     [
                         'code' => $code,
                         'parent_id' => $parentId,
-                        'latitude' => !empty($lat) ? (float) $lat : null,
-                        'longitude' => !empty($lng) ? (float) $lng : null,
+                        'latitude' => !empty($lat) && is_numeric($lat) ? (float) $lat : null,
+                        'longitude' => !empty($lng) && is_numeric($lng) ? (float) $lng : null,
                         'type' => $type,
                     ]
                 );
-
-                // Perbarui cache ID hierarki berjalan untuk baris-baris anak di bawahnya
-                if ($level === 1) {
-                    $currentLv1Id = $unit->id;
-                    $currentLv2Id = null;
-                    $currentLv3Id = null;
-                } elseif ($level === 2) {
-                    $currentLv2Id = $unit->id;
-                    $currentLv3Id = null;
-                } elseif ($level === 3) {
-                    $currentLv3Id = $unit->id;
-                }
 
                 $created++;
             }
@@ -409,7 +391,7 @@ class UnitController extends Controller
 
         if ($totalCreated > 0) {
             AssetHistory::create([
-                'asset_id'    => 0, // Sesuaikan jika kolom mengizinkan null atau ID default
+                'asset_id'    => null, 
                 'user_id'     => Auth::id(),
                 'action'      => 'TAMBAH',
                 'description' => "Melakukan impor data unit sebanyak {$totalCreated} baris.",

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Asset;
 use App\Models\Unit;
+use App\Models\AssetCategory;
 use App\Models\SuttTower;
 use App\Models\AssetHistory;
 use Illuminate\Support\Str;
@@ -75,6 +76,25 @@ class AssetController extends Controller
             'assets' => $assets,
             'teganganOptions' => self::TEGANGAN_OPTIONS,
             'selectedTegangan' => $tegangan,
+        ]);
+    }
+
+    /**
+     * Menampilkan daftar semua tower secara independen untuk menu Manage Tower.
+     */
+    public function indexTower(Request $request)
+    {
+        $query = SuttTower::with('suttLine')->orderBy('name');
+
+        if ($search = $request->query('search')) {
+            $query->where('name', 'ILIKE', "%{$search}%")
+                  ->orWhere('functloc', 'ILIKE', "%{$search}%");
+        }
+
+        $towers = $query->paginate(20)->withQueryString();
+
+        return view('manageTower', [
+            'towers' => $towers,
         ]);
     }
 
@@ -575,6 +595,29 @@ class AssetController extends Controller
         }
 
         return round($totalKm, 2); 
+    }
+
+    public function indexByCategory($category, Request $request)
+    {
+        $currentCategory = AssetCategory::where('slug', $category)->firstOrFail();
+
+        $assets = Asset::where('category', $currentCategory->name)
+            ->when($request->search, function($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->paginate(10)
+            ->withQueryString();
+
+        // Tentukan nama view berdasarkan slug dari database
+        // Contoh: slug 'tower' -> view 'manageAsset'
+        // Contoh: slug 'access-point' -> view 'manageAccessPoint'
+        $viewName = match($currentCategory->slug) {
+            'tower' => 'manageAsset',          // file manageAsset.blade.php milik tower
+            'access-point' => 'manageAccessPoint', // file manageAccessPoint.blade.php milik AP
+            default => 'manageAsset',          // fallback default jika ada kategori lain
+        };
+
+        return view($viewName, compact('currentCategory', 'assets'));
     }
 
     private function haversineGreatCircleDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371)

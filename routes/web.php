@@ -82,12 +82,11 @@ Route::middleware('auth')->group(function () {
     // Rute hapus aset universal
     Route::delete('manage-asset/{asset}', [AssetController::class, 'destroy'])->name('manage-asset.destroy');
 
-    // ==========================================
-    // MANAGE ACCESS POINT
+    // ==========================================   
+    // MANAGE ACCESS POINT (HAPUS KARENA SUDAH DINAMIS)
     // ==========================================
     Route::get('manage-access-point/create', [AccessPointController::class, 'create'])->name('manage-access-point.create');
     Route::post('manage-access-point', [AccessPointController::class, 'store'])->name('manage-access-point.store');
-    
     Route::get('manage-access-point', [AccessPointController::class, 'index'])->name('manage-access-point');
     Route::get('manage-access-point/{accessPoint}/edit', [AccessPointController::class, 'edit'])->name('manage-access-point.edit');
     Route::patch('manage-access-point/{accessPoint}', [AccessPointController::class, 'update'])->name('manage-access-point.update');

@@ -13,6 +13,7 @@ class AssetCategorySeeder extends Seeder
             ['name' => 'Tower', 'slug' => 'tower', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Access Point', 'slug' => 'access-point', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Router', 'slug' => 'router', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Switch', 'slug' => 'switch', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }

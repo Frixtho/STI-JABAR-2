@@ -49,3 +49,4 @@ class AccessPointController extends Controller
 
         return view('manageAccessPoint', compact('accessPoints', 'lokasi'));
     }
+}

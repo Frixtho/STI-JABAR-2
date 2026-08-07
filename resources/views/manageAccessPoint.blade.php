@@ -55,6 +55,7 @@
                     {{ session('error') }}
                 </div>
             @endif
+
             <nav class="flex items-center gap-1.5 text-sm">
                 <a href="{{ route('dashboard') }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">Dashboard</a>
                 <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -62,6 +63,7 @@
                 </svg>
                 <span class="font-semibold text-gray-700 dark:text-gray-200">Manage Asset: {{ $currentCategory->name ?? '' }}</span>
             </nav>
+
             {{-- Header Title & Action Buttons --}}
             <div class="flex items-start justify-between flex-wrap gap-4">
                 <div>
@@ -69,8 +71,8 @@
                     <h1 class="text-xl font-bold text-pln-800 dark:text-white tracking-wide">{{ $currentCategory->name ?? 'Daftar Aset' }}</h1>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap">
-                    {{-- TOMBOL TOTAL ASSET (Menggunakan Alpine.js) --}}
-                    <button onclick="document.getElementById('totalAssetModal').classList.remove('hidden')" type="button" class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-3.5 py-2 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm cursor-pointer">
+                    {{-- TOMBOL TOTAL ASSET (Alpine.js) --}}
+                    <button type="button" @click="openTotalAssetModal = true" class="inline-flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 px-3.5 py-2 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm cursor-pointer">
                         <svg class="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                         </svg>
@@ -285,31 +287,17 @@
                             {{ $accessPoints->onEachSide(1)->links() }}
                         </div>
                     </div>
-                @else
-                    <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                        <span>Menampilkan 1–1 dari 1 aset</span>
-                        <div class="flex items-center gap-1">
-                            <span class="px-3 py-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed">‹ Sebelumnya</span>
-                            <span class="px-3 py-1 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 font-medium text-gray-700 dark:text-gray-200">Hal. 1 / 1</span>
-                            <span class="px-3 py-1 rounded border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed">Berikutnya ›</span>
-                        </div>
-                    </div>
                 @endif
             </div>
-
         </main>
     </div>
 
     {{-- ===================== MODAL TOTAL ASSET ===================== --}}
     <div x-show="openTotalAssetModal" style="display: none;" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        {{-- Backdrop / Background Gelap --}}
         <div class="fixed inset-0 bg-gray-900/50 backdrop-blur-xs transition-opacity" @click="openTotalAssetModal = false"></div>
 
         <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-            {{-- Panel Modal --}}
             <div class="relative transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 text-left shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-xl border border-gray-100 dark:border-gray-700">
-                
-                {{-- Header Modal --}}
                 <div class="flex items-center justify-between px-6 py-5 border-b border-gray-100 dark:border-gray-700/60">
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white" id="modal-title">
                         Ringkasan Total Asset Access Point
@@ -321,9 +309,7 @@
                     </button>
                 </div>
 
-                {{-- Body Modal --}}
                 <div class="p-6 space-y-4 text-sm text-gray-600 dark:text-gray-300">
-                    {{-- Alert Box PLN Theme --}}
                     <div class="rounded-xl border border-cyan-100 dark:border-[#004A54]/40 bg-cyan-50/50 dark:bg-gray-900/40 p-4 shadow-xs">
                         <p class="font-bold text-[#004A54] dark:text-accent-400 text-xs sm:text-sm">
                             Informasi Keseluruhan Data Perangkat
@@ -333,11 +319,10 @@
                         </p>
                     </div>
 
-                    {{-- 3 Kotak Statistik --}}
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div class="border border-gray-200/80 dark:border-gray-700 rounded-xl p-3.5 bg-white dark:bg-gray-800/60 shadow-xs">
                             <div class="text-xl font-bold text-[#004A54] dark:text-accent-400">
-                                {{ isset($accessPoints) && method_exists($accessPoints, 'total') ? $accessPoints->total() : \App\Models\AccessPoint::count() }}
+                                {{ \App\Models\AccessPoint::count() }}
                             </div>
                             <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Total Access Point</div>
                         </div>
@@ -354,20 +339,13 @@
                             <div class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Perlu Perhatian</div>
                         </div>
                     </div>
-
-                    {{-- Catatan Tambahan --}}
-                    <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed px-0.5">
-                        Pastikan seluruh data perangkat Access Point selalu diperbarui secara berkala sesuai dengan kondisi fisik dan operasional di lapangan.
-                    </p>
                 </div>
 
-                {{-- Footer Modal Actions --}}
-                <div class="bg-gray-50/75 dark:bg-gray-900/40 px-6 py-4 flex flex-wrap items-center justify-end gap-2.5 border-t border-gray-100 dark:border-gray-700/60">
+                <div class="bg-gray-50/75 dark:bg-gray-900/40 px-6 py-4 flex items-center justify-end border-t border-gray-100 dark:border-gray-700/60">
                     <button @click="openTotalAssetModal = false" type="button" class="px-4 py-2 text-xs font-semibold text-white bg-[#004A54] hover:bg-[#00363d] rounded-lg transition-all shadow-sm cursor-pointer">
                         Tutup
                     </button>
                 </div>
-
             </div>
         </div>
     </div>

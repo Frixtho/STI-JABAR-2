@@ -88,8 +88,7 @@
 
             {{-- Filter & Cari --}}
             <div class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
-                <form method="GET" action="{{ route('manage-asset.category', $currentCategory->slug ?? '') }}" class="w-full flex flex-row flex-wrap items-center gap-4">
-                    <div class="flex-1 min-w-[200px] relative">
+                <form method="GET" action="{{ route('manage-asset') }}" class="w-full flex flex-row flex-wrap items-center gap-4">                    <div class="flex-1 min-w-[200px] relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h12M4 18h8" />
@@ -100,7 +99,7 @@
                     </div>
 
                     <div class="shrink-0">
-                        <a href="{{ route('manage-asset.category', $currentCategory->slug ?? '') }}" class="border-2 border-[#004A54] dark:border-accent-400 text-[#004A54] dark:text-accent-400 px-5 py-2 rounded-lg text-sm font-bold hover:bg-cyan-50/50 dark:hover:bg-gray-700 transition-all block text-center tracking-wide">
+                        <a href="{{ isset($currentCategory) ? route('manage-asset.category', $currentCategory->slug) : route('manage-asset') }}" class="border-2 border-[#004A54] dark:border-accent-400 text-[#004A54] dark:text-accent-400 px-5 py-2 rounded-lg text-sm font-bold hover:bg-cyan-50/50 dark:hover:bg-gray-700 transition-all block text-center tracking-wide">
                             Reset
                         </a>
                     </div>

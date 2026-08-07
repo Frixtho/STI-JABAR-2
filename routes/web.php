@@ -8,9 +8,9 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AccessPointController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SwitchController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -36,48 +36,27 @@ Route::middleware('auth')->group(function () {
     Route::patch('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
 
     // ==========================================
-    // MANAGE USER (Route statis ditaruh di atas)
+    // MANAGE USER
     // ==========================================
     Route::get('manage-user/create', [AddUserController::class, 'create'])->name('manage-user.create');
     Route::post('manage-user/store', [AddUserController::class, 'store'])->name('manage-user.store');
-    
     Route::get('manage-user', [ManageUserController::class, 'index'])->name('manage-user');
     Route::get('manage-user/{id}/edit', [ManageUserController::class, 'edit'])->name('manage-user.edit');
     Route::patch('manage-user/{id}', [ManageUserController::class, 'update'])->name('manage-user.update');
     Route::delete('manage-user/{id}', [ManageUserController::class, 'destroy'])->name('manage-user.destroy');
 
     // ==========================================
-    // MANAGE UNIT (Route statis ditaruh di atas)
+    // MANAGE UNIT
     // ==========================================
     Route::get('manage-unit/create', [UnitController::class, 'create'])->name('manage-unit.create');
     Route::get('manage-unit/import', [UnitController::class, 'importForm'])->name('manage-unit.import.form');
     Route::post('manage-unit/import', [UnitController::class, 'import'])->name('manage-unit.import');
     Route::post('manage-unit', [UnitController::class, 'store'])->name('manage-unit.store');
-    
     Route::get('manage-unit', [UnitController::class, 'index'])->name('manage-unit');
     Route::get('manage-unit/{unit}/edit', [UnitController::class, 'edit'])->name('manage-unit.edit');
     Route::get('manage-unit/{unit}/distance-bandung', [UnitController::class, 'distanceToBandung'])->name('manage-unit.distance');
     Route::patch('manage-unit/{unit}', [UnitController::class, 'update'])->name('manage-unit.update');
     Route::delete('manage-unit/{unit}', [UnitController::class, 'destroy'])->name('manage-unit.destroy');
-
-   // ==========================================
-    // MANAGE ASSET (jalur SUTT) & TOWER
-    // ==========================================
-    Route::get('/manage-asset/history', [AssetController::class, 'history'])->name('manage-asset.history');
-    Route::get('manage-asset/create', [AssetController::class, 'create'])->name('manage-asset.create');
-    Route::get('manage-asset/import', [AssetController::class, 'importForm'])->name('manage-asset.import.form');
-    Route::post('manage-asset/import', [AssetController::class, 'import'])->name('manage-asset.import');
-    Route::post('/manage-asset', [AssetController::class, 'store'])->name('manage-asset.store');
-    Route::get('manage-asset/{asset}/edit', [AssetController::class, 'edit'])->name('manage-asset.edit');
-    Route::patch('manage-asset/{asset}', [AssetController::class, 'update'])->name('manage-asset.update');
-    Route::delete('manage-asset/{asset}', [AssetController::class, 'destroy'])->name('manage-asset.destroy');
-    Route::get('manage-asset/{id}', [AssetController::class, 'show'])->name('manage-asset.show');
-    Route::get('manage-asset', [AssetController::class, 'index'])->name('manage-asset');
-
-    Route::get('manage-tower', [AssetController::class, 'indexTower'])->name('manage-tower');
-    Route::get('manage-asset/tower/{tower}/edit', [AssetController::class, 'editTower'])->name('manage-asset.tower.edit');
-    Route::patch('manage-asset/tower/{tower}', [AssetController::class, 'updateTower'])->name('manage-asset.tower.update');
-    Route::delete('manage-asset/tower/{tower}', [AssetController::class, 'destroyTower'])->name('manage-asset.tower.destroy');
 
     // ==========================================
     // MANAGE ACCESS POINT
@@ -108,4 +87,31 @@ Route::middleware('auth')->group(function () {
     Route::get('manage-switch/{id}/edit', [SwitchController::class, 'edit'])->name('manage-switch.edit');
     Route::patch('manage-switch/{id}', [SwitchController::class, 'update'])->name('manage-switch.update');
     Route::delete('manage-switch/{id}', [SwitchController::class, 'destroy'])->name('manage-switch.destroy');
+
+    // ==========================================
+    // MANAGE TOWER
+    // ==========================================
+    Route::get('manage-tower', [AssetController::class, 'indexTower'])->name('manage-tower');
+    Route::get('manage-asset/tower/{tower}/edit', [AssetController::class, 'editTower'])->name('manage-asset.tower.edit');
+    Route::patch('manage-asset/tower/{tower}', [AssetController::class, 'updateTower'])->name('manage-asset.tower.update');
+    Route::delete('manage-asset/tower/{tower}', [AssetController::class, 'destroyTower'])->name('manage-asset.tower.destroy');
+
+    // ==========================================
+    // MANAGE ASSET (SUTT & Umum)
+    // ==========================================
+    Route::get('manage-asset/history', [AssetController::class, 'history'])->name('manage-asset.history');
+    Route::get('manage-asset/create', [AssetController::class, 'create'])->name('manage-asset.create');
+    Route::get('manage-asset/import', [AssetController::class, 'importForm'])->name('manage-asset.import.form');
+    Route::post('manage-asset/import', [AssetController::class, 'import'])->name('manage-asset.import');
+    Route::post('manage-asset', [AssetController::class, 'store'])->name('manage-asset.store');
+    Route::get('manage-asset', [AssetController::class, 'index'])->name('manage-asset');
+    
+    // Rute dengan parameter angka atau slug spesifik diletakkan SEBELUM parameter bebas
+    Route::get('manage-asset/{id}/edit', [AssetController::class, 'edit'])->where('id', '[0-9]+')->name('manage-asset.edit');
+    Route::patch('manage-asset/{id}', [AssetController::class, 'update'])->where('id', '[0-9]+')->name('manage-asset.update');
+    Route::delete('manage-asset/{id}', [AssetController::class, 'destroy'])->where('id', '[0-9]+')->name('manage-asset.destroy');
+    Route::get('manage-asset/{id}', [AssetController::class, 'show'])->where('id', '[0-9]+')->name('manage-asset.show');
+
+    // Jika Anda ingin kategori dinamis berbasis slug khusus di AssetController:
+    Route::get('manage-asset/{category:slug}', [AssetController::class, 'indexByCategory'])->name('manage-asset.category');
 });

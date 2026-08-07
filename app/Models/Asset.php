@@ -36,4 +36,10 @@ class Asset extends Model
     {
         return $this->belongsTo(Unit::class, 'gi_akhir_id');
     }
+
+    // Ubah nama fungsi relasinya agar tidak sama persis dengan nama kolom 'category'
+    public function assetCategory()
+    {
+        return $this->belongsTo(AssetCategory::class, 'asset_category_id');
+    }
 }

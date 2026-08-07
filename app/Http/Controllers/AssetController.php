@@ -132,6 +132,23 @@ class AssetController extends Controller
         return redirect()->route('manage-asset')->with('success', 'Jalur SUTT berhasil ditambahkan.');
     }
 
+    public function indexByCategory($categorySlug)
+    {
+        // Cari data kategori berdasarkan slug (misal: access-point, router, switch, dll)
+        $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
+
+        // DIPERBAIKI: Menggunakan 'asset_category_id' sesuai kolom asli database Anda
+        $assets = Asset::where('asset_category_id', $currentCategory->id)
+                    ->orderBy('name')
+                    ->paginate(20)
+                    ->withQueryString();
+
+        return view('manageAsset', [
+            'assets' => $assets,
+            'currentCategory' => $currentCategory,
+        ]);
+    }
+
     public function edit(Asset $asset)
     {
         $upts = Unit::where('level', 2)->orderBy('name')->get();
@@ -589,9 +606,6 @@ class AssetController extends Controller
         return $angle * $earthRadius;
     }
 
-    /**
-     * Menampilkan halaman riwayat perubahan (Audit Trail)
-     */
     public function history()
     {
         $histories = \App\Models\AssetHistory::with('user')->latest()->paginate(10);

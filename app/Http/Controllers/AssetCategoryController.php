@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 class AssetController extends Controller
 {
+    /**
+     * Kandidat nama kolom (alias) per field, dipakai buat nebak mapping
+     * otomatis waktu CSV baru diupload. Perbandingan case-insensitive.
+     */
     private const FIELD_ALIASES = [
         'generic' => [
             'name' => ['nama', 'name', 'nama_asset', 'nama aset'],
@@ -37,10 +41,12 @@ class AssetController extends Controller
         'longitude' => 'Longitude',
     ];
 
+    /** Pilihan tegangan yang valid buat dropdown filter & deteksi otomatis dari nama. */
     private const TEGANGAN_OPTIONS = ['30', '70', '150', '500'];
 
     public function index(Request $request)
     {
+        // Balik ke per-jalur (1 baris = 1 jalur SUTT), bukan per-tower.
         $query = DB::table('sutt_lines')->orderBy('name');
 
         if ($search = $request->query('search')) {
@@ -61,6 +67,7 @@ class AssetController extends Controller
             }
             $line->tegangan = $teganganDinamis;
 
+            // GI Awal / Akhir (kalau kolomnya ada isinya & unit-nya ketemu)
             $line->gi_awal_name = isset($line->gi_awal_id) ? optional(Unit::find($line->gi_awal_id))->name : null;
             $line->gi_akhir_name = isset($line->gi_akhir_id) ? optional(Unit::find($line->gi_akhir_id))->name : null;
         }
@@ -72,6 +79,9 @@ class AssetController extends Controller
         ]);
     }
 
+    /**
+     * Menampilkan daftar semua tower secara independen untuk menu Manage Tower.
+     */
     public function indexTower(Request $request)
     {
         $query = SuttTower::with('suttLine')->orderBy('name');
@@ -91,7 +101,7 @@ class AssetController extends Controller
     public function create(Request $request)
     {
         $upts = Unit::where('level', 2)->orderBy('name')->get();
-        $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
+        $garduInduks = Unit::where('level', 4)->orderBy('name')->get(); 
         $asset = null;
 
         return view('assetForm', compact('upts', 'garduInduks', 'asset'));
@@ -122,6 +132,7 @@ class AssetController extends Controller
             'panjang_km' => $request->panjang_km,
         ]);
 
+        // Catat ke Asset History
         AssetHistory::create([
             'asset_id' => $asset->id,
             'user_id' => auth()->id(),
@@ -145,6 +156,7 @@ class AssetController extends Controller
         $validated = $this->validateAsset($request, $asset->id);
         $asset->update($validated);
 
+        // Catat ke Asset History
         AssetHistory::create([
             'asset_id' => $asset->id,
             'user_id' => auth()->id(),
@@ -159,9 +171,10 @@ class AssetController extends Controller
     {
         $assetName = $asset->name;
         $assetId = $asset->id;
-
+        
         $asset->delete();
 
+        // Catat ke Asset History
         AssetHistory::create([
             'asset_id' => $assetId,
             'user_id' => auth()->id(),
@@ -201,7 +214,7 @@ class AssetController extends Controller
             'default_category' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $defaultCategory = $request->input('default_category', 'sutt');
+        $defaultCategory = $request->input('default_category', 'sutt'); 
         $uploadedFiles = $request->file('files');
 
         $defaultUpt = Unit::where('level', 2)->first();
@@ -214,7 +227,8 @@ class AssetController extends Controller
 
         foreach ($uploadedFiles as $file) {
             $handle = fopen($file->getRealPath(), 'r');
-
+            
+            // Deteksi delimiter otomatis (koma atau titik koma)
             $sampleLine = fgets($handle);
             rewind($handle);
             $delimiter = (substr_count($sampleLine, ';') > substr_count($sampleLine, ',')) ? ';' : ',';
@@ -250,7 +264,7 @@ class AssetController extends Controller
                 } elseif (count($row) > count($header)) {
                     $row = array_slice($row, 0, count($header));
                 }
-
+                
                 $raw = array_combine($header, $row);
                 $mapped = $this->buildRowFromMapping($raw, $mapping);
                 $this->applyWktFallback($mapped, $raw, $wktColumn);
@@ -273,7 +287,7 @@ class AssetController extends Controller
                 ];
 
                 $result = $this->processAssetRowDirect($rowData, $namaJalurDefault);
-
+                
                 if ($result['status'] === 'failed') {
                     $totalSkipped++;
                     $allSkippedReasons[] = $result['alasan'];
@@ -287,9 +301,11 @@ class AssetController extends Controller
             fclose($handle);
         }
 
+        // --- HITUNG OTOMATIS PANJANG KM & JUMLAH TOWER ---
         foreach (array_unique($processedAssetIds) as $assetId) {
             $this->recalcLineStats($assetId);
-
+            
+            // Catat history import/tambah lewat CSV
             AssetHistory::create([
                 'asset_id' => $assetId,
                 'user_id' => auth()->id(),
@@ -406,7 +422,7 @@ class AssetController extends Controller
                 [
                     'sutt_line_id' => $lineId,
                     'tower_number' => $towerNumber,
-                ],
+                ], 
                 [
                     'functloc' => $row['functloc'] ?? ('TOWER-' . $lineId . '-' . $towerNumber),
                     'name' => $row['name'] ?? 'Tower ' . $towerNumber,
@@ -429,6 +445,7 @@ class AssetController extends Controller
             return redirect()->back()->with('error', 'Jalur SUTT tidak ditemukan.');
         }
 
+        // Ambil SEMUA tower (tanpa pagination) khusus buat hitung jumlah & panjang jalur
         $allTowersOrdered = SuttTower::where('sutt_line_id', $id)->orderBy('tower_number')->get();
 
         $pathLengthKm = 0;
@@ -444,11 +461,13 @@ class AssetController extends Controller
             }
         }
 
+        // Yang ditampilkan di tabel: di-paginate biar gak numpuk ratusan baris
         $towers = SuttTower::where('sutt_line_id', $id)
             ->orderBy('tower_number')
             ->paginate(50)
             ->withQueryString();
 
+        // Deteksi tegangan dinamis untuk halaman detail
         $teganganDinamis = '150 kV';
         if (preg_match('/(30|70|150|500)\s*kv/i', $line->name, $matchTegangan)) {
             $teganganDinamis = $matchTegangan[1] . ' kV';
@@ -464,6 +483,8 @@ class AssetController extends Controller
             'pathLengthKm' => $pathLengthKm,
         ]);
     }
+
+    // ===================== CRUD TOWER (dari halaman detail jalur) =====================
 
     public function editTower($towerId)
     {
@@ -488,6 +509,7 @@ class AssetController extends Controller
 
         $this->recalcLineStats($tower->sutt_line_id);
 
+        // Catat ke Asset History untuk perubahan tower
         AssetHistory::create([
             'asset_id' => $tower->sutt_line_id,
             'user_id' => auth()->id(),
@@ -509,6 +531,7 @@ class AssetController extends Controller
 
         $this->recalcLineStats($lineId);
 
+        // Catat ke Asset History untuk penghapusan tower
         AssetHistory::create([
             'asset_id' => $lineId,
             'user_id' => auth()->id(),
@@ -520,6 +543,7 @@ class AssetController extends Controller
             ->with('success', 'Tower berhasil dihapus.');
     }
 
+    /** Hitung ulang panjang_km & jumlah_tower punya sebuah jalur, simpan kalau kolomnya ada. */
     private function recalcLineStats(int $lineId): void
     {
         $panjang = $this->hitungPanjangJalurSUTT($lineId);
@@ -532,13 +556,13 @@ class AssetController extends Controller
                 'updated_at' => now(),
             ]);
         } catch (\Exception $e) {
-            //
+            // Abaikan jika kolom tidak ada di tabel sutt_lines
         }
     }
 
     private function calculateHaversineDistance($lat1, $lon1, $lat2, $lon2)
     {
-        $earthRadius = 6371;
+        $earthRadius = 6371; 
 
         $dLat = deg2rad($lat2 - $lat1);
         $dLon = deg2rad($lon2 - $lon1);
@@ -551,7 +575,7 @@ class AssetController extends Controller
 
         return $earthRadius * $c;
     }
-
+    
     public function hitungPanjangJalurSUTT($assetId)
     {
         $towers = SuttTower::where('sutt_line_id', $assetId)
@@ -563,14 +587,37 @@ class AssetController extends Controller
         for ($i = 0; $i < count($towers) - 1; $i++) {
             $lat1 = $towers[$i]->latitude;
             $lon1 = $towers[$i]->longitude;
-
+            
             $lat2 = $towers[$i+1]->latitude;
             $lon2 = $towers[$i+1]->longitude;
 
             $totalKm += $this->haversineGreatCircleDistance($lat1, $lon1, $lat2, $lon2);
         }
 
-        return round($totalKm, 2);
+        return round($totalKm, 2); 
+    }
+
+    public function indexByCategory($category, Request $request)
+    {
+        $currentCategory = AssetCategory::where('slug', $category)->firstOrFail();
+
+        $assets = Asset::where('category', $currentCategory->name)
+            ->when($request->search, function($query, $search) {
+                $query->where('name', 'like', "%{$search}%");
+            })
+            ->paginate(10)
+            ->withQueryString();
+
+        // Tentukan nama view berdasarkan slug dari database
+        // Contoh: slug 'tower' -> view 'manageAsset'
+        // Contoh: slug 'access-point' -> view 'manageAccessPoint'
+        $viewName = match($currentCategory->slug) {
+            'tower' => 'manageAsset',          // file manageAsset.blade.php milik tower
+            'access-point' => 'manageAccessPoint', // file manageAccessPoint.blade.php milik AP
+            default => 'manageAsset',          // fallback default jika ada kategori lain
+        };
+
+        return view($viewName, compact('currentCategory', 'assets'));
     }
 
     private function haversineGreatCircleDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo, $earthRadius = 6371)
@@ -585,7 +632,7 @@ class AssetController extends Controller
 
         $angle = 2 * asin(sqrt(pow(sin($latDelta / 2), 2) +
             cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
-
+        
         return $angle * $earthRadius;
     }
 
@@ -594,7 +641,7 @@ class AssetController extends Controller
      */
     public function history()
     {
-        $histories = \App\Models\AssetHistory::with('user')->latest()->paginate(10);
+        $histories = \App\Models\AssetHistory::with('user')->latest()->paginate(10); 
 
         return view('assetHistory', compact('histories'));
     }

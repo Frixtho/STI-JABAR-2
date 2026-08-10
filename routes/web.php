@@ -59,34 +59,24 @@ Route::middleware('auth')->group(function () {
     Route::delete('manage-unit/{unit}', [UnitController::class, 'destroy'])->name('manage-unit.destroy');
 
     // ==========================================
-    // MANAGE ACCESS POINT
-    // ==========================================
-    Route::get('manage-access-point/create', [AccessPointController::class, 'create'])->name('manage-access-point.create');
-    Route::post('manage-access-point', [AccessPointController::class, 'store'])->name('manage-access-point.store');
-    Route::get('manage-access-point', [AccessPointController::class, 'index'])->name('manage-access-point');
-    Route::get('manage-access-point/{accessPoint}/edit', [AccessPointController::class, 'edit'])->name('manage-access-point.edit');
-    Route::patch('manage-access-point/{accessPoint}', [AccessPointController::class, 'update'])->name('manage-access-point.update');
-    Route::delete('/manage-access-point/{id}', [AccessPointController::class, 'destroy'])->name('manage-access-point.destroy');
-
-    // ==========================================
     // MANAGE ROUTER
     // ==========================================
-    Route::get('manage-router/create', [RouterController::class, 'create'])->name('manage-router.create');
-    Route::post('manage-router', [RouterController::class, 'store'])->name('manage-router.store');
-    Route::get('manage-router', [RouterController::class, 'index'])->name('manage-router');
-    Route::get('manage-router/{id}/edit', [RouterController::class, 'edit'])->name('manage-router.edit');
-    Route::patch('manage-router/{id}', [RouterController::class, 'update'])->name('manage-router.update');
-    Route::delete('manage-router/{id}', [RouterController::class, 'destroy'])->name('manage-router.destroy');
+    Route::get('/manage-asset/router', [RouterController::class, 'index'])->name('manage-router');
+    Route::get('/manage-asset/router/create', [RouterController::class, 'create'])->name('manage-router.create');
+    Route::post('/manage-asset/router', [RouterController::class, 'store'])->name('manage-router.store');
+    Route::get('/manage-asset/router/{id}/edit', [RouterController::class, 'edit'])->name('manage-router.edit');
+    Route::patch('/manage-asset/router/{id}', [RouterController::class, 'update'])->name('manage-router.update');
+    Route::delete('/manage-asset/router/{id}', [RouterController::class, 'destroy'])->name('manage-router.destroy');
 
     // ==========================================
     // MANAGE SWITCH
     // ==========================================
-    Route::get('manage-switch/create', [SwitchController::class, 'create'])->name('manage-switch.create');
-    Route::post('manage-switch', [SwitchController::class, 'store'])->name('manage-switch.store');
-    Route::get('manage-switch', [SwitchController::class, 'index'])->name('manage-switch');
-    Route::get('manage-switch/{id}/edit', [SwitchController::class, 'edit'])->name('manage-switch.edit');
-    Route::patch('manage-switch/{id}', [SwitchController::class, 'update'])->name('manage-switch.update');
-    Route::delete('manage-switch/{id}', [SwitchController::class, 'destroy'])->name('manage-switch.destroy');
+    Route::get('/manage-asset/switch', [SwitchController::class, 'index'])->name('manage-switch');
+    Route::get('/manage-asset/switch/create', [SwitchController::class, 'create'])->name('manage-switch.create');
+    Route::post('/manage-asset/switch', [SwitchController::class, 'store'])->name('manage-switch.store');
+    Route::get('/manage-asset/switch/{id}/edit', [SwitchController::class, 'edit'])->name('manage-switch.edit');
+    Route::patch('/manage-asset/switch/{id}', [SwitchController::class, 'update'])->name('manage-switch.update');
+    Route::delete('/manage-asset/switch/{id}', [SwitchController::class, 'destroy'])->name('manage-switch.destroy');
 
     // ==========================================
     // MANAGE TOWER
@@ -105,13 +95,52 @@ Route::middleware('auth')->group(function () {
     Route::post('manage-asset/import', [AssetController::class, 'import'])->name('manage-asset.import');
     Route::post('manage-asset', [AssetController::class, 'store'])->name('manage-asset.store');
     Route::get('manage-asset', [AssetController::class, 'index'])->name('manage-asset');
-    
-    // Rute dengan parameter angka atau slug spesifik diletakkan SEBELUM parameter bebas
-    Route::get('manage-asset/{id}/edit', [AssetController::class, 'edit'])->where('id', '[0-9]+')->name('manage-asset.edit');
+
+    // ==========================================
+    // MANAGE ACCESS POINT
+    // ==========================================
+
+    Route::get(
+        'manage-asset/access-point',
+        [AccessPointController::class, 'index']
+    )->name('manage-access-point');
+
+    Route::get(
+        'manage-asset/access-point/create',
+        [AccessPointController::class, 'create']
+    )->name('manage-access-point.create');
+
+    Route::post(
+        'manage-asset/access-point',
+        [AccessPointController::class, 'store']
+    )->name('manage-access-point.store');
+
+    Route::get(
+        'manage-asset/access-point/{accessPoint}/edit',
+        [AccessPointController::class, 'edit']
+    )->name('manage-access-point.edit');
+
+    Route::patch(
+        'manage-asset/access-point/{accessPoint}',
+        [AccessPointController::class, 'update']
+    )->name('manage-access-point.update');
+
+    Route::delete(
+        'manage-asset/access-point/{accessPoint}',
+        [AccessPointController::class, 'destroy']
+    )->name('manage-access-point.destroy');
+
+    // ==========================================
+    // MANAGE ASSET BY ID
+    // ==========================================
+    Route::get('manage-asset/{id}/edit', [AssetController::class, 'edit'])->where('id', '[0-9]+') ->name('manage-asset.edit');
     Route::patch('manage-asset/{id}', [AssetController::class, 'update'])->where('id', '[0-9]+')->name('manage-asset.update');
     Route::delete('manage-asset/{id}', [AssetController::class, 'destroy'])->where('id', '[0-9]+')->name('manage-asset.destroy');
     Route::get('manage-asset/{id}', [AssetController::class, 'show'])->where('id', '[0-9]+')->name('manage-asset.show');
 
-    // Jika Anda ingin kategori dinamis berbasis slug khusus di AssetController:
-    Route::get('manage-asset/{category:slug}', [AssetController::class, 'indexByCategory'])->name('manage-asset.category');
+
+    // ==========================================
+    // MANAGE ASSET CATEGORY
+    // ==========================================
+    Route::get('manage-asset/{category:slug}',[AssetController::class, 'indexByCategory'])->name('manage-asset.category');
 });

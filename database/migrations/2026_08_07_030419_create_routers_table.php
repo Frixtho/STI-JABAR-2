@@ -11,20 +11,19 @@ return new class extends Migration
         Schema::create('routers', function (Blueprint $table) {
             $table->id();
             $table->string('id_aset')->unique();
-            $table->date('tanggal_perolehan');
-            $table->string('status_kepemilikan');
-            $table->string('keterangan_kepemilikan')->nullable();
-            $table->string('status_kondisi');
-            $table->string('status_operasional');
-            $table->string('tingkat_kritikalitas');
-            $table->string('klasifikasi_keamanan');
-            $table->text('deskripsi_fungsi_aset')->nullable();
-            $table->string('lokasi_aset_saat_ini');
-            $table->string('kode_lokasi');
-            $table->string('keterangan_lokasi')->nullable();
-            $table->date('tanggal_pemeriksaan_terakhir')->nullable();
-            $table->string('pic_pencatat');
-            $table->string('bidang_pencatat_aset')->nullable();
+            $table->date('tanggal_perolehan')->nullable();
+            $table->string('status_kepemilikan')->nullable();
+
+            $table->string('status_kondisi')->nullable();
+            $table->string('status_operasional')->nullable();
+            $table->string('tingkat_kritikalitas')->nullable();
+
+            $table->string('klasifikasi_keamanan')->nullable();
+
+            $table->string('lokasi_aset_saat_ini')->nullable();
+            $table->string('kode_lokasi')->nullable();
+
+            $table->string('pic_pencatat')->nullable();
 
             // Atribut spesifik Router
             $table->string('merk');

@@ -139,12 +139,6 @@ Route::middleware('auth')->group(function () {
     Route::delete('manage-asset/{id}', [AssetController::class, 'destroy'])->where('id', '[0-9]+')->name('manage-asset.destroy');
     Route::get('manage-asset/{id}', [AssetController::class, 'show'])->where('id', '[0-9]+')->name('manage-asset.show');
 
-
-    // ==========================================
-    // MANAGE ASSET CATEGORY
-    // ==========================================
-    Route::get('manage-asset/{category:slug}',[AssetController::class, 'indexByCategory'])->name('manage-asset.category');
-
     // ==========================================
     // MANAGE FIREWALL
     // ==========================================
@@ -154,4 +148,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/manage-asset/firewall/{id}/edit', [FirewallController::class, 'edit'])->name('manage-firewall.edit');
     Route::patch('/manage-asset/firewall/{id}', [FirewallController::class, 'update'])->name('manage-firewall.update');
     Route::delete('/manage-asset/firewall/{id}', [FirewallController::class, 'destroy'])->name('manage-firewall.destroy');
+
+    // ==========================================
+    // MANAGE ASSET CATEGORY
+    // ==========================================
+    Route::get('manage-asset/{category:slug}',[AssetController::class, 'indexByCategory'])->name('manage-asset.category');
 });

@@ -93,7 +93,7 @@
     {{-- SEARCH --}}
     <form
         method="GET"
-        action="{{ route('manage-firewall.index') }}"
+        action="{{ route('manage-firewall') }}"
         class="bg-white rounded-xl
                border border-gray-200
                shadow-sm p-3"
@@ -145,7 +145,7 @@
             </button>
 
             <a
-                href="{{ route('manage-firewall.index') }}"
+                href="{{ route('manage-firewall') }}"
                 class="px-5 py-2.5
                        rounded-md
                        border border-[#004A54]

@@ -66,10 +66,57 @@ class SwitchController extends Controller
         ));
     }
 
+    public function ImportForm()
+    {
+        return view('switchImport'); 
+    }
 
-    /**
-     * FORM TAMBAH
-     */
+    public function importStore(\Illuminate\Http\Request $request)
+    {
+        // Validasi dan logika proses import file Excel/CSV di sini
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls,csv',
+        ]);
+
+        // Contoh redirect setelah sukses
+        return redirect()->route('manage-switch')->with('success', 'Data switch berhasil diimport.');
+    }
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'files.*' => 'required|mimes:xlsx,xls,csv,txt|max:10240', // Maksimal 10MB per file
+        ]);
+
+        if (!$request->hasFile('files')) {
+            return back()->with('error', 'Tidak ada file yang diunggah.');
+        }
+
+        $skippedReasons = [];
+        $successCount = 0;
+
+        foreach ($request->file('files') as $file) {
+            try {
+                // Contoh logika pembacaan file / integrasi Maatwebsite Excel
+                // Excel::import(new SwitchImport, $file);
+                
+                // Atau proses kustom parsing di sini sesuai kolom Excel Switch Anda:
+                // (No, Nama Switch, IP Address, Serial Number, Lokasi, Model, Port Count, dll.)
+                
+                $successCount++;
+            } catch (Exception $e) {
+                $skippedReasons[] = "File " . $file->getClientOriginalName() . ": " . $e->getMessage();
+            }
+        }
+
+        if (count($skippedReasons) > 0) {
+            return back()->with('success', "Berhasil memproses sebagian file.")
+                         ->with('import_skipped_reasons', $skippedReasons);
+        }
+
+        return redirect()->route('manage-asset')->with('success', 'Semua data Asset Switch berhasil diimport!');
+    }
+
     public function create()
     {
         $switch = null;
@@ -78,9 +125,7 @@ class SwitchController extends Controller
     }
 
 
-    /**
-     * SIMPAN SWITCH BARU
-     */
+
     public function store(Request $request)
     {
         $validated = $this->validateSwitch($request);

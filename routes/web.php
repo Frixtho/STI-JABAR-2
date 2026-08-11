@@ -64,6 +64,8 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     Route::get('/manage-asset/router', [RouterController::class, 'index'])->name('manage-router');
     Route::get('/manage-asset/router/create', [RouterController::class, 'create'])->name('manage-router.create');
+    Route::get('/manage-asset/router/import', [RouterController::class, 'importForm'])->name('manage-router.import.form');
+    Route::post('/manage-asset/router/import', [RouterController::class, 'import'])->name('manage-asset.router.import');        // <- Tambahan Rute Proses Import
     Route::post('/manage-asset/router', [RouterController::class, 'store'])->name('manage-router.store');
     Route::get('/manage-asset/router/{id}/edit', [RouterController::class, 'edit'])->name('manage-router.edit');
     Route::patch('/manage-asset/router/{id}', [RouterController::class, 'update'])->name('manage-router.update');
@@ -73,7 +75,9 @@ Route::middleware('auth')->group(function () {
     // MANAGE SWITCH
     // ==========================================
     Route::get('/manage-asset/switch', [SwitchController::class, 'index'])->name('manage-switch');
-    Route::get('/manage-asset/switch/create', [SwitchController::class, 'create'])->name('manage-switch.create');
+    Route::get('/manage-asset/switch/create', [SwitchController::class, 'create'])->name('manage-asset.switch.create');
+    Route::get('/manage-asset/switch/import', [SwitchController::class, 'importForm'])->name('manage-asset.switch.import');
+    Route::post('/manage-asset/switch/import', [SwitchController::class, 'importStore'])->name('manage-asset.switch.import.store');
     Route::post('/manage-asset/switch', [SwitchController::class, 'store'])->name('manage-switch.store');
     Route::get('/manage-asset/switch/{id}/edit', [SwitchController::class, 'edit'])->name('manage-switch.edit');
     Route::patch('/manage-asset/switch/{id}', [SwitchController::class, 'update'])->name('manage-switch.update');
@@ -100,57 +104,36 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     // MANAGE ACCESS POINT
     // ==========================================
-
-    Route::get(
-        'manage-asset/access-point',
-        [AccessPointController::class, 'index']
-    )->name('manage-access-point');
-
-    Route::get(
-        'manage-asset/access-point/create',
-        [AccessPointController::class, 'create']
-    )->name('manage-access-point.create');
-
-    Route::post(
-        'manage-asset/access-point',
-        [AccessPointController::class, 'store']
-    )->name('manage-access-point.store');
-
-    Route::get(
-        'manage-asset/access-point/{accessPoint}/edit',
-        [AccessPointController::class, 'edit']
-    )->name('manage-access-point.edit');
-
-    Route::patch(
-        'manage-asset/access-point/{accessPoint}',
-        [AccessPointController::class, 'update']
-    )->name('manage-access-point.update');
-
-    Route::delete(
-        'manage-asset/access-point/{accessPoint}',
-        [AccessPointController::class, 'destroy']
-    )->name('manage-access-point.destroy');
-
+// ==========================================
+    // MANAGE ACCESS POINT
     // ==========================================
-    // MANAGE ASSET BY ID
-    // ==========================================
-    Route::get('manage-asset/{id}/edit', [AssetController::class, 'edit'])->where('id', '[0-9]+') ->name('manage-asset.edit');
-    Route::patch('manage-asset/{id}', [AssetController::class, 'update'])->where('id', '[0-9]+')->name('manage-asset.update');
-    Route::delete('manage-asset/{id}', [AssetController::class, 'destroy'])->where('id', '[0-9]+')->name('manage-asset.destroy');
-    Route::get('manage-asset/{id}', [AssetController::class, 'show'])->where('id', '[0-9]+')->name('manage-asset.show');
-
+    Route::get('manage-asset/access-point', [AccessPointController::class, 'index'])->name('manage-access-point');
+    Route::get('manage-asset/access-point/create', [AccessPointController::class, 'create'])->name('manage-access-point.create');
+    Route::get('manage-asset/access-point/import', [AccessPointController::class, 'importForm'])->name('manage-access-point.import.form');
+    Route::post('manage-asset/access-point/import', [AccessPointController::class, 'importStore'])->name('manage-asset.access-point.import'); // Disesuaikan agar namanya match dengan `route('manage-asset.access-point.import')`
+    Route::post('manage-asset/access-point', [AccessPointController::class, 'store'])->name('manage-access-point.store');
+    Route::get('manage-asset/access-point/{accessPoint}/edit', [AccessPointController::class, 'edit'])->name('manage-access-point.edit');
+    Route::patch('manage-asset/access-point/{accessPoint}', [AccessPointController::class, 'update'])->name('manage-access-point.update');
+    Route::delete('manage-asset/access-point/{accessPoint}', [AccessPointController::class, 'destroy'])->name('manage-access-point.destroy');
+    
     // ==========================================
     // MANAGE FIREWALL
     // ==========================================
     Route::get('/manage-asset/firewall', [FirewallController::class, 'index'])->name('manage-firewall');
-    Route::get('/manage-asset/firewall/create', [FirewallController::class, 'create'])->name('manage-firewall.create');
-    Route::post('/manage-asset/firewall', [FirewallController::class, 'store'])->name('manage-firewall.store');
-    Route::get('/manage-asset/firewall/{id}/edit', [FirewallController::class, 'edit'])->name('manage-firewall.edit');
-    Route::patch('/manage-asset/firewall/{id}', [FirewallController::class, 'update'])->name('manage-firewall.update');
-    Route::delete('/manage-asset/firewall/{id}', [FirewallController::class, 'destroy'])->name('manage-firewall.destroy');
+    Route::get('/manage-asset/firewall/create', [FirewallController::class, 'create'])->name('manage-asset.firewall.create');
+    Route::get('/manage-asset/firewall/import', [FirewallController::class, 'importForm'])->name('manage-asset.firewall.import');
+    Route::post('/manage-asset/firewall/import', [FirewallController::class, 'importStore'])->name('manage-asset.firewall.import.process'); // Diubah namanya agar sesuai dengan form action
+    Route::post('/manage-asset/firewall', [FirewallController::class, 'store'])->name('manage-asset.firewall.store');
+    Route::get('/manage-asset/firewall/{id}/edit', [FirewallController::class, 'edit'])->name('manage-asset.firewall.edit');
+    Route::patch('/manage-asset/firewall/{id}', [FirewallController::class, 'update'])->name('manage-asset.firewall.update');
+    Route::delete('/manage-asset/firewall/{id}', [FirewallController::class, 'destroy'])->name('manage-asset.firewall.destroy');
 
     // ==========================================
-    // MANAGE ASSET CATEGORY
+    // MANAGE ASSET BY ID & CATEGORY (Ditaruh di bawah agar aman)
     // ==========================================
-    Route::get('manage-asset/{category:slug}',[AssetController::class, 'indexByCategory'])->name('manage-asset.category');
+    Route::get('manage-asset/{id}/edit', [AssetController::class, 'edit'])->where('id', '[0-9]+')->name('manage-asset.edit');
+    Route::patch('manage-asset/{id}', [AssetController::class, 'update'])->where('id', '[0-9]+')->name('manage-asset.update');
+    Route::delete('manage-asset/{id}', [AssetController::class, 'destroy'])->where('id', '[0-9]+')->name('manage-asset.destroy');
+    Route::get('manage-asset/{id}', [AssetController::class, 'show'])->where('id', '[0-9]+')->name('manage-asset.show');
+    Route::get('manage-asset/{category:slug}', [AssetController::class, 'indexByCategory'])->name('manage-asset.category');
 });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Router;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Validation\Rule;
 
 class RouterController extends Controller
@@ -77,10 +78,76 @@ class RouterController extends Controller
         return view('routerForm', compact('router'));
     }
 
+    public function importForm()
+    {
+        return view('routerImport'); // Sesuaikan path view Anda jika berbeda
+    }
 
-    /**
-     * SIMPAN ROUTER BARU
-     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'files.*' => 'required|mimes:xlsx,xls,csv,txt'
+        ]);
+
+        $skippedReasons = [];
+        $successCount = 0;
+
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                try {
+                    $data = Excel::toArray([], $file);
+                    $rows = $data[0] ?? [];
+
+                    foreach ($rows as $index => $row) {
+                        if ($index < 4 || empty($row[1])) { 
+                            continue; 
+                        }
+
+                        try {
+                            RouterAsset::create([
+                                'tanggal_aktif'             => $row[1] ?? null,
+                                'status_kepemilikan'        => $row[2] ?? null,
+                                'ket_status_kepemilikan'    => $row[3] ?? null,
+                                'status_kondisi'            => $row[4] ?? null,
+                                'status_operasional'        => $row[5] ?? null,
+                                'tingkat_kritikalitas'      => $row[6] ?? null,
+                                'klasifikasi_keamanan'      => $row[7] ?? null,
+                                'deskripsi_fungsi'          => $row[8] ?? null,
+                                'lokasi_aset'               => $row[9] ?? null,
+                                'ket_lokasi'                => $row[10] ?? null,
+                                'tanggal_pemeriksaan'       => $row[11] ?? null,
+                                'pic_pencatat'              => $row[12] ?? null,
+                                'bidang_pencatat'           => $row[13] ?? null,
+                                'merk'                      => $row[14] ?? null,
+                                'model'                     => $row[15] ?? null,
+                                'serial_number'             => $row[16] ?? null,
+                                'mac_address'               => $row[17] ?? null,
+                                'ip_address'                => $row[18] ?? null,
+                                'jumlah_kecepatan_port'     => $row[19] ?? null,
+                                'protocol_disupport'        => $row[20] ?? null,
+                                'versi_firmware'            => $row[21] ?? null,
+                                'konsumsi_daya'             => $row[22] ?? null,
+                                'rack'                      => $row[23] ?? null,
+                                'masa_berlaku_garansi'      => $row[24] ?? null,
+                                'keterangan'                => $row[25] ?? null,
+                            ]);
+
+                            $successCount++;
+                        } catch (\Exception $e) {
+                            $skippedReasons[] = "File {$file->getClientOriginalName()} Baris " . ($index + 1) . ": " . $e->getMessage();
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $skippedReasons[] = "Gagal membaca file {$file->getClientOriginalName()}: " . $e->getMessage();
+                }
+            }
+        }
+
+        return redirect()->route('manage-asset.router.import')
+            ->with('success', "Berhasil mengimpor {$successCount} data Router.")
+            ->with('import_skipped_reasons', $skippedReasons);
+    }
+
     public function store(Request $request)
     {
         $validated = $this->validateRouter($request);

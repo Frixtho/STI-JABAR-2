@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Manage Switch — PLN Financial'])
+@extends('layouts.app', ['title' => 'Manage Firewall — PLN Financial'])
 
 @section('content')
 
@@ -23,7 +23,7 @@
         </svg>
 
         <span class="font-semibold text-gray-700">
-            Manage Asset: Switch & TOR Switch
+            Manage Asset: Firewall
         </span>
 
     </nav>
@@ -38,7 +38,7 @@
             </p>
 
             <h1 class="text-2xl font-bold text-[#004A54]">
-                Switch & TOR Switch
+                Firewall
             </h1>
         </div>
 
@@ -56,7 +56,7 @@
             </button>
 
             <a
-                href="{{ route('manage-switch.create') }}"
+                href="{{ route('manage-firewall.create') }}"
                 class="inline-flex items-center gap-2
                        bg-[#004A54] text-white
                        px-4 py-2.5 rounded-md
@@ -64,7 +64,7 @@
                        hover:bg-[#00363d]"
             >
                 <span class="text-lg leading-none">+</span>
-                Tambah Switch
+                Tambah Firewall
             </a>
 
         </div>
@@ -93,7 +93,7 @@
     {{-- SEARCH --}}
     <form
         method="GET"
-        action="{{ route('manage-switch') }}"
+        action="{{ route('manage-firewall.index') }}"
         class="bg-white rounded-xl
                border border-gray-200
                shadow-sm p-3"
@@ -120,7 +120,7 @@
                     type="text"
                     name="search"
                     value="{{ request('search') }}"
-                    placeholder="Cari ID Aset, merk, model, serial number, IP, lokasi, PIC..."
+                    placeholder="Cari ID Aset, merk, model, serial number, segmen, lokasi, PIC..."
                     class="w-full rounded-md
                            border border-gray-300
                            pl-10 pr-4 py-2.5
@@ -145,7 +145,7 @@
             </button>
 
             <a
-                href="{{ route('manage-switch') }}"
+                href="{{ route('manage-firewall.index') }}"
                 class="px-5 py-2.5
                        rounded-md
                        border border-[#004A54]
@@ -174,9 +174,9 @@
 
                     <tr class="text-left">
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">ID Aset / Merk</th>
-                        <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">Serial Number / IP</th>
+                        <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">Serial Number / Segmen</th>
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">Lokasi / Rack</th>
-                        <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">Spesifikasi Port</th>
+                        <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">Firmware / OS</th>
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">Kondisi & Operasional</th>
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">Kritikalitas</th>
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">PIC / Bidang</th>
@@ -188,52 +188,49 @@
 
                 <tbody class="divide-y divide-gray-100">
 
-                    @forelse($switches as $switch)
+                    @forelse($firewalls as $firewall)
 
                         <tr class="hover:bg-gray-50 transition-colors">
 
                             {{-- ID Aset & Merk/Model --}}
                             <td class="px-5 py-4">
                                 <span class="font-semibold text-[#004A54] block">
-                                    {{ $switch->id_aset }}
+                                    {{ $firewall->id_aset }}
                                 </span>
-                                <div class="font-medium text-gray-800 text-xs mt-0.5">{{ $switch->merk }} {{ $switch->model ? '— ' . $switch->model : '' }}</div>
+                                <div class="font-medium text-gray-800 text-xs mt-0.5">{{ $firewall->merk }} {{ $firewall->model ? '— ' . $firewall->model : '' }}</div>
                             </td>
 
-                            {{-- Serial Number & IP/MAC Address --}}
+                            {{-- Serial Number & Segmen --}}
                             <td class="px-5 py-4 font-mono text-xs">
-                                <div class="text-gray-700">{{ $switch->serial_number }}</div>
-                                <div class="text-gray-400 text-[10px] mt-0.5">{{ $switch->ip_address ?? '-' }}</div>
+                                <div class="text-gray-700">{{ $firewall->serial_number }}</div>
+                                <div class="text-gray-400 text-[10px] mt-0.5">{{ $firewall->segmen_number ? 'Segmen: ' . $firewall->segmen_number : '-' }}</div>
                             </td>
 
                             {{-- Lokasi & Rack --}}
                             <td class="px-5 py-4 text-gray-700 text-xs">
-                                <div>{{ $switch->lokasi_aset_saat_ini ?? '-' }}</div>
-                                <div class="text-[10px] text-gray-400">Rack: {{ $switch->rack ?? '-' }}</div>
+                                <div>{{ $firewall->lokasi_aset_saat_ini ?? '-' }}</div>
+                                <div class="text-[10px] text-gray-400">Rack: {{ $firewall->rack ?? '-' }}</div>
                             </td>
 
-                            {{-- Port & Kecepatan --}}
-                            <td class="px-5 py-4 text-xs text-gray-600 max-w-xs truncate" title="{{ $switch->jumlah_kecepatan_jenis_port ?? $switch->jumlah_port }}">
-                                {{ $switch->jumlah_kecepatan_jenis_port ?? $switch->jumlah_port ?? '-' }}
-                                @if(isset($switch->support_poe) && strtoupper($switch->support_poe) === 'YA')
-                                    <span class="ml-1 px-1.5 py-0.5 bg-purple-50 text-purple-600 text-[10px] rounded font-semibold">PoE</span>
-                                @endif
+                            {{-- Versi Firmware OS --}}
+                            <td class="px-5 py-4 text-xs text-gray-600">
+                                {{ $firewall->versi_firmware_os ?? '-' }}
                             </td>
 
                             {{-- Kondisi & Operasional --}}
                             <td class="px-5 py-4">
                                 <div class="flex items-center gap-1.5">
                                     @php
-                                        $kondisi = strtolower($switch->status_kondisi ?? '');
-                                        $ops = strtolower($switch->status_operasional ?? '');
+                                        $kondisi = strtolower($firewall->status_kondisi_aset ?? '');
+                                        $ops = strtolower($firewall->status_operasional_aset ?? '');
                                     @endphp
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium
                                         {{ $kondisi === 'baik' ? 'bg-green-100 text-green-700' : (str_contains($kondisi, 'rusak') ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700') }}">
-                                        {{ $switch->status_kondisi ?? 'N/A' }}
+                                        {{ $firewall->status_kondisi_aset ?? 'N/A' }}
                                     </span>
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium
                                         {{ $ops === 'aktif' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600' }}">
-                                        {{ $switch->status_operasional ?? 'N/A' }}
+                                        {{ $firewall->status_operasional_aset ?? 'N/A' }}
                                     </span>
                                 </div>
                             </td>
@@ -241,7 +238,7 @@
                             {{-- Tingkat Kritikalitas --}}
                             <td class="px-5 py-4">
                                 @php
-                                    $kritikalitas = strtolower($switch->tingkat_kritikalitas ?? '');
+                                    $kritikalitas = strtolower($firewall->tingkat_kritikalitas_aset ?? '');
                                 @endphp
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium
                                     {{ $kritikalitas === 'kritis'
@@ -249,14 +246,14 @@
                                         : ($kritikalitas === 'penting'
                                             ? 'bg-yellow-100 text-yellow-700'
                                             : 'bg-gray-100 text-gray-600') }}">
-                                    {{ $switch->tingkat_kritikalitas ?? '-' }}
+                                    {{ $firewall->tingkat_kritikalitas_aset ?? '-' }}
                                 </span>
                             </td>
 
                             {{-- PIC & Bidang Pencatat --}}
                             <td class="px-5 py-4 text-xs text-gray-700">
-                                <div>{{ $switch->pic_pencatat ?? '-' }}</div>
-                                <div class="text-[10px] text-gray-400">{{ $switch->bidang_pencatat_aset ?? '-' }}</div>
+                                <div>{{ $firewall->pic_pencatat ?? '-' }}</div>
+                                <div class="text-[10px] text-gray-400">{{ $firewall->bidang_pencatat_aset ?? '-' }}</div>
                             </td>
 
                             {{-- Aksi --}}
@@ -264,7 +261,7 @@
                                 <div class="flex items-center justify-end gap-2">
 
                                     <a
-                                        href="{{ route('manage-switch.edit', $switch->id) }}"
+                                        href="{{ route('manage-firewall.edit', $firewall->id) }}"
                                         title="Edit"
                                         class="w-9 h-9
                                                flex items-center justify-center
@@ -280,9 +277,9 @@
                                     </a>
 
                                     <form
-                                        action="{{ route('manage-switch.destroy', $switch->id) }}"
+                                        action="{{ route('manage-firewall.destroy', $firewall->id) }}"
                                         method="POST"
-                                        onsubmit="return confirm('Hapus switch {{ $switch->id_aset }}?')"
+                                        onsubmit="return confirm('Hapus firewall {{ $firewall->id_aset }}?')"
                                     >
                                         @csrf
                                         @method('DELETE')
@@ -319,7 +316,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77-1.333.192 3 1.732 3z" />
                                     </svg>
                                     <p>
-                                        Belum ada data untuk kategori <strong>Switch & TOR Switch</strong>.
+                                        Belum ada data untuk kategori <strong>Firewall</strong>.
                                     </p>
                                 </div>
                             </td>
@@ -341,16 +338,16 @@
 
             <div>
                 Menampilkan
-                {{ $switches->firstItem() ?? 0 }}
+                {{ $firewalls->firstItem() ?? 0 }}
                 -
-                {{ $switches->lastItem() ?? 0 }}
+                {{ $firewalls->lastItem() ?? 0 }}
                 dari
-                {{ $switches->total() }}
+                {{ $firewalls->total() }}
                 data
             </div>
 
             <div>
-                {{ $switches->onEachSide(1)->links() }}
+                {{ $firewalls->onEachSide(1)->links() }}
             </div>
 
         </div>

@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\AddUserController;
 use App\Http\Controllers\ManageUserController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\FirewallController;
 use App\Http\Controllers\UnitController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AccessPointController;
@@ -143,4 +144,14 @@ Route::middleware('auth')->group(function () {
     // MANAGE ASSET CATEGORY
     // ==========================================
     Route::get('manage-asset/{category:slug}',[AssetController::class, 'indexByCategory'])->name('manage-asset.category');
+
+    // ==========================================
+    // MANAGE FIREWALL
+    // ==========================================
+    Route::get('/manage-asset/firewall', [FirewallController::class, 'index'])->name('manage-firewall');
+    Route::get('/manage-asset/firewall/create', [FirewallController::class, 'create'])->name('manage-firewall.create');
+    Route::post('/manage-asset/firewall', [FirewallController::class, 'store'])->name('manage-firewall.store');
+    Route::get('/manage-asset/firewall/{id}/edit', [FirewallController::class, 'edit'])->name('manage-firewall.edit');
+    Route::patch('/manage-asset/firewall/{id}', [FirewallController::class, 'update'])->name('manage-firewall.update');
+    Route::delete('/manage-asset/firewall/{id}', [FirewallController::class, 'destroy'])->name('manage-firewall.destroy');
 });

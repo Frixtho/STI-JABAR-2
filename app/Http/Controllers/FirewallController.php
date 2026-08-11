@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Router;
+use App\Models\Firewall;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
-class RouterController extends Controller
+class FirewallController extends Controller
 {
     /**
-     * LIST ROUTER
+     * LIST FIREWALL
      */
     public function index(Request $request)
     {
-        $query = Router::query();
+        $query = Firewall::query();
 
         // SEARCH
         if ($request->filled('search')) {
@@ -24,25 +24,27 @@ class RouterController extends Controller
                     ->orWhere('merk', 'like', "%{$search}%")
                     ->orWhere('model', 'like', "%{$search}%")
                     ->orWhere('serial_number', 'like', "%{$search}%")
-                    ->orWhere('ip_address', 'like', "%{$search}%")
-                    ->orWhere('mac_address', 'like', "%{$search}%")
-                    ->orWhere('lokasi_aset_saat_ini', 'like', "%{$search}%");
+                    ->orWhere('segmen_number', 'like', "%{$search}%")
+                    ->orWhere('segmen_tujuan', 'like', "%{$search}%")
+                    ->orWhere('lokasi_aset_saat_ini', 'like', "%{$search}%")
+                    ->orWhere('pic_pencatat', 'like', "%{$search}%") // Tambahan agar pencarian PIC berfungsi
+                    ->orWhere('bidang_pencatat_aset', 'like', "%{$search}%");
             });
         }
 
         // FILTER KONDISI
         if ($request->filled('kondisi')) {
-            $query->where('status_kondisi', $request->kondisi);
+            $query->where('status_kondisi_aset', $request->kondisi);
         }
 
         // FILTER OPERASIONAL
         if ($request->filled('status_operasional')) {
-            $query->where('status_operasional', $request->status_operasional);
+            $query->where('status_operasional_aset', $request->status_operasional);
         }
 
         // FILTER KRITIKALITAS
         if ($request->filled('kritikalitas')) {
-            $query->where('tingkat_kritikalitas', $request->kritikalitas);
+            $query->where('tingkat_kritikalitas_aset', $request->kritikalitas);
         }
 
         // FILTER LOKASI
@@ -50,20 +52,17 @@ class RouterController extends Controller
             $query->where('lokasi_aset_saat_ini', $request->lokasi);
         }
 
-        $routers = $query
+        $firewalls = $query
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
-        $lokasiList = Router::whereNotNull('lokasi_aset_saat_ini')
+        $lokasiList = Firewall::whereNotNull('lokasi_aset_saat_ini')
             ->distinct()
             ->orderBy('lokasi_aset_saat_ini')
             ->pluck('lokasi_aset_saat_ini');
 
-        return view('manageRouter', compact(
-            'routers',
-            'lokasiList'
-        ));
+        return view('manageFirewall', compact('firewalls', 'lokasiList'));
     }
 
 
@@ -72,22 +71,22 @@ class RouterController extends Controller
      */
     public function create()
     {
-        $router = null;
+        $firewall = null;
 
-        return view('routerForm', compact('router'));
+        return view('firewallForm', compact('firewall'));
     }
 
 
     /**
-     * SIMPAN ROUTER BARU
+     * SIMPAN FIREWALL BARU
      */
     public function store(Request $request)
     {
-        $validated = $this->validateRouter($request);
+        $validated = $this->validateFirewall($request);
 
         /*
         |--------------------------------------------------------------------------
-        | Kolom default yang disesuaikan dengan struktur database baru
+        | Kolom default yang disesuaikan dengan struktur database
         |--------------------------------------------------------------------------
         */
         $data = array_merge([
@@ -102,11 +101,11 @@ class RouterController extends Controller
             'keterangan'                    => null,
         ], $validated);
 
-        Router::create($data);
+        Firewall::create($data);
 
         return redirect()
-            ->route('manage-router')
-            ->with('success', 'Aset Router berhasil ditambahkan!');
+            ->route('manage-firewall.index')
+            ->with('success', 'Aset Firewall berhasil ditambahkan!');
     }
 
 
@@ -115,51 +114,51 @@ class RouterController extends Controller
      */
     public function edit($id)
     {
-        $router = Router::findOrFail($id);
+        $firewall = Firewall::findOrFail($id);
 
-        return view('routerForm', compact('router'));
+        return view('firewallForm', compact('firewall'));
     }
 
 
     /**
-     * UPDATE ROUTER
+     * UPDATE FIREWALL
      */
     public function update(Request $request, $id)
     {
-        $router = Router::findOrFail($id);
+        $firewall = Firewall::findOrFail($id);
 
-        $validated = $this->validateRouter(
+        $validated = $this->validateFirewall(
             $request,
-            $router->id
+            $firewall->id
         );
 
-        $router->update($validated);
+        $firewall->update($validated);
 
         return redirect()
-            ->route('manage-router')
-            ->with('success', 'Aset Router berhasil diperbarui!');
+            ->route('manage-firewall.index')
+            ->with('success', 'Aset Firewall berhasil diperbarui!');
     }
 
 
     /**
-     * HAPUS ROUTER
+     * HAPUS FIREWALL
      */
     public function destroy($id)
     {
-        $router = Router::findOrFail($id);
+        $firewall = Firewall::findOrFail($id);
 
-        $router->delete();
+        $firewall->delete();
 
         return redirect()
-            ->route('manage-router')
-            ->with('success', 'Data Router berhasil dihapus.');
+            ->route('manage-firewall.index')
+            ->with('success', 'Data Firewall berhasil dihapus.');
     }
 
 
     /**
-     * VALIDASI ROUTER
+     * VALIDASI FIREWALL
      */
-    private function validateRouter(Request $request, $id = null)
+    private function validateFirewall(Request $request, $id = null)
     {
         return $request->validate([
             /*
@@ -172,23 +171,23 @@ class RouterController extends Controller
                 'string',
                 'max:255',
                 $id
-                    ? Rule::unique('routers', 'id_aset')->ignore($id)
-                    : Rule::unique('routers', 'id_aset'),
+                    ? Rule::unique('firewalls', 'id_aset')->ignore($id)
+                    : Rule::unique('firewalls', 'id_aset'),
             ],
 
-            'status_kondisi' => [
+            'status_kondisi_aset' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'status_operasional' => [
+            'status_operasional_aset' => [
                 'required',
                 'string',
                 'max:255',
             ],
 
-            'tingkat_kritikalitas' => [
+            'tingkat_kritikalitas_aset' => [
                 'required',
                 'string',
                 'max:255',
@@ -202,7 +201,7 @@ class RouterController extends Controller
 
             /*
             |--------------------------------------------------------------------------
-            | ATRIBUT ROUTER (Sesuai dengan migration terbaru)
+            | ATRIBUT SPESIFIK FIREWALL
             |--------------------------------------------------------------------------
             */
             'merk' => [
@@ -223,25 +222,13 @@ class RouterController extends Controller
                 'max:255',
             ],
 
-            'mac_address' => [
+            'segmen_number' => [
                 'nullable',
                 'string',
                 'max:255',
             ],
 
-            'ip_address' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'jumlah_kecepatan_jenis_port' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
-
-            'protocol_disupport' => [
+            'segmen_tujuan' => [
                 'nullable',
                 'string',
                 'max:255',

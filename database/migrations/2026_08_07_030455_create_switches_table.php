@@ -13,6 +13,13 @@ return new class extends Migration
             $table->string('id_aset')->unique();
             $table->date('tanggal_perolehan')->nullable();
             $table->string('status_kepemilikan')->nullable();
+            
+            // Kolom tambahan yang dikirim controller tapi sebelumnya belum ada:
+            $table->text('keterangan_kepemilikan')->nullable();
+            $table->text('deskripsi_fungsi_aset')->nullable();
+            $table->string('keterangan_lokasi')->nullable();
+            $table->date('tanggal_pemeriksaan_terakhir')->nullable();
+            $table->string('bidang_pencatat_aset')->nullable();
 
             $table->string('status_kondisi')->nullable();
             $table->string('status_operasional')->nullable();

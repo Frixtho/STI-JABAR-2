@@ -11,6 +11,9 @@ use App\Http\Controllers\AssetController;
 use App\Http\Controllers\AccessPointController;
 use App\Http\Controllers\RouterController;
 use App\Http\Controllers\SwitchController;
+use App\Http\Controllers\ServerBaremetalController;
+use App\Http\Controllers\ServerFisikController;
+use App\Http\Controllers\ModemController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -104,9 +107,6 @@ Route::middleware('auth')->group(function () {
     // ==========================================
     // MANAGE ACCESS POINT
     // ==========================================
-// ==========================================
-    // MANAGE ACCESS POINT
-    // ==========================================
     Route::get('manage-asset/access-point', [AccessPointController::class, 'index'])->name('manage-access-point');
     Route::get('manage-asset/access-point/create', [AccessPointController::class, 'create'])->name('manage-access-point.create');
     Route::get('manage-asset/access-point/import', [AccessPointController::class, 'importForm'])->name('manage-access-point.import.form');
@@ -127,6 +127,54 @@ Route::middleware('auth')->group(function () {
     Route::get('/manage-asset/firewall/{id}/edit', [FirewallController::class, 'edit'])->name('manage-asset.firewall.edit');
     Route::patch('/manage-asset/firewall/{id}', [FirewallController::class, 'update'])->name('manage-asset.firewall.update');
     Route::delete('/manage-asset/firewall/{id}', [FirewallController::class, 'destroy'])->name('manage-asset.firewall.destroy');
+
+    // ==========================================
+    // MANAGE MODEM
+    // ==========================================
+    Route::prefix('manage-asset/modem')->name('manage-modem')->group(function () {
+        Route::get('/', [ModemController::class, 'index']);
+        Route::get('/create', [ModemController::class, 'create'])->name('.create');
+        Route::post('/store', [ModemController::class, 'store'])->name('.store');
+        Route::get('/{modem}/edit', [ModemController::class, 'edit'])->name('.edit');
+        Route::patch('/{modem}', [ModemController::class, 'update'])->name('.update');
+        Route::delete('/{modem}', [ModemController::class, 'destroy'])->name('.destroy');
+        Route::get('/import', [ModemController::class, 'importForm'])->name('.import.form');
+        Route::post('/import', [ModemController::class, 'importStore'])->name('.import.store');
+    });
+
+    // ==========================================
+    // MANAGE SERVER BAREMETAL
+    // ==========================================
+    Route::prefix('manage-asset/server-baremetal')->name('manage-server-baremetal')->group(function () {
+        Route::get('/', [ServerBaremetalController::class, 'index']);
+        Route::get('/create', [ServerBaremetalController::class, 'create'])->name('.create');
+        Route::post('/store', [ServerBaremetalController::class, 'store'])->name('.store');
+        
+        // Import Routes
+        Route::get('/import', [ServerBaremetalController::class, 'importForm'])->name('.import.form');
+        Route::post('/import', [ServerBaremetalController::class, 'importStore'])->name('.import.store');
+
+        Route::get('/{server}/edit', [ServerBaremetalController::class, 'edit'])->name('.edit');
+        Route::patch('/{server}', [ServerBaremetalController::class, 'update'])->name('.update');
+        Route::delete('/{server}', [ServerBaremetalController::class, 'destroy'])->name('.destroy');
+    });
+
+    // ==========================================
+    // MANAGE SERVER FISIK
+    // ==========================================
+    Route::prefix('manage-asset/server-fisik')->name('manage-server-fisik')->group(function () {
+        Route::get('/', [ServerFisikController::class, 'index']);
+        Route::get('/create', [ServerFisikController::class, 'create'])->name('.create');
+        Route::post('/store', [ServerFisikController::class, 'store'])->name('.store');
+        
+        // Import Routes
+        Route::get('/import', [ServerFisikController::class, 'importForm'])->name('.import.form');
+        Route::post('/import', [ServerFisikController::class, 'importStore'])->name('.import.store');
+
+        Route::get('/{serverFisik}/edit', [ServerFisikController::class, 'edit'])->name('.edit');
+        Route::patch('/{serverFisik}', [ServerFisikController::class, 'update'])->name('.update');
+        Route::delete('/{serverFisik}', [ServerFisikController::class, 'destroy'])->name('.destroy');
+    });
 
     // ==========================================
     // MANAGE ASSET BY ID & CATEGORY (Ditaruh di bawah agar aman)

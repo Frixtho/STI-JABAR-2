@@ -1,11 +1,10 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use App\Models\AssetHistory;
 use App\Models\Firewall;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 use Exception;
 
 class FirewallController extends Controller
@@ -72,20 +71,37 @@ class FirewallController extends Controller
      */
     public function create()
     {
-        $asset = null; // Diubah dari $firewall ke $asset agar sesuai dengan blade template sebelumnya
-
+        $asset = null; 
         return view('firewallForm', compact('asset'));
     }
 
+    /**
+     * FORM IMPORT EXCEL/CSV
+     */
     public function importForm()
     {
         return view('firewallImport'); 
     }
 
-    public function import(Request $request)
+    /**
+     * PROSES SIMPAN IMPORT DATA
+     * (Nama function diubah menjadi importStore agar cocok dengan route 'manage-asset.firewall.import.process')
+     */
+    /**
+     * PROSES SIMPAN IMPORT DATA (MENGGUNAKAN CSV MURNI)
+     */
+    /**
+     * PROSES SIMPAN IMPORT DATA (TEMPLATE RESMI CSV)
+     */
+    /**
+     * PROSES SIMPAN IMPORT DATA (KHUSUS UNTUK FILE TEST CSV 9 KOLOM)
+     */
+    public function importStore(Request $request)
     {
+        // 1. Validasi HANYA menerima CSV atau TXT
         $request->validate([
-            'files.*' => 'required|file|mimes:xlsx,xls,csv,txt',
+            'files'   => ['required', 'array'],
+            'files.*' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
         if (!$request->hasFile('files')) {
@@ -97,77 +113,109 @@ class FirewallController extends Controller
 
         foreach ($request->file('files') as $file) {
             try {
-                $filePath = $file->getRealPath();
-                $spreadsheet = IOFactory::load($filePath);
-                $sheet = $spreadsheet->getActiveSheet();
-                $rows = $sheet->toArray();
+                $handle = fopen($file->getRealPath(), 'r');
 
-                // Baca data mulai dari baris index ke-5 (baris ke-6 di Excel)
-                for ($i = 5; $i < count($rows); $i++) {
-                    $row = $rows[$i];
+                // Deteksi Delimiter (koma atau titik koma)
+                $sampleLine = fgets($handle);
+                rewind($handle);
+                $delimiter = (substr_count($sampleLine, ';') > substr_count($sampleLine, ',')) ? ';' : ',';
 
-                    // Cek jika baris kosong (kolom ID Aset / Merk kosong)
-                    if (empty($row[1]) && empty($row[15])) {
+                $rowIndex = 0;
+
+                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                    $rowIndex++;
+
+                    // Melewati baris PERTAMA saja (karena baris 1 adalah Header/Judul Kolom di file test Anda)
+                    if ($rowIndex === 1) {
                         continue;
                     }
 
-                    $merk = $row[15] ?? null;
-                    $model = $row[16] ?? null;
-                    $serialNumber = $row[17] ?? null;
-                    $segmenNumber = $row[18] ?? null;
-                    $segmenTujuan = $row[19] ?? null;
-                    $versiFirmware = $row[20] ?? null;
-
-                    // Validasi kolom wajib spesifik firewall
-                    if (empty($merk) || empty($model) || empty($segmenNumber) || empty($segmenTujuan) || empty($versiFirmware)) {
-                        $skippedReasons[] = "File {$file->getClientOriginalName()} Baris ke-" . ($i + 1) . " dilewati: Kolom wajib spesifik (Merk, Model, Segmen Number/Tujuan, atau Versi Firmware) ada yang kosong.";
+                    // Melewati baris jika seluruhnya kosong
+                    if ($row === [null] || empty(array_filter($row))) {
                         continue;
                     }
 
-                    // Simpan data dari Excel ke Database
+                    // Pemetaan Index Column CSV sesuai file test (Total 9 Kolom)
+                    // Index: 0=Kondisi, 1=Ops, 2=Kritikalitas, 3=Lokasi, 4=Merk, 5=Model, 6=Firmware, 7=SegmenNum, 8=SegmenTujuan
+                    $kondisi       = $row[0] ?? 'baik';
+                    $operasional   = $row[1] ?? 'aktif';
+                    $kritikalitas  = $row[2] ?? 'penting';
+                    $lokasi        = $row[3] ?? 'Pusat';
+                    $merk          = $row[4] ?? null;
+                    $model         = $row[5] ?? null;
+                    $versiFirmware = $row[6] ?? null;
+                    $segmenNumber  = $row[7] ?? null;
+                    $segmenTujuan  = $row[8] ?? null;
+
+                    // Validasi sederhana: pastikan Merk tidak kosong
+                    if (empty(trim($merk))) {
+                        $skippedReasons[] = "Baris ke-{$rowIndex} dilewati: Kolom Merk kosong.";
+                        continue;
+                    }
+
+                    AssetHistory::create([
+                        'asset_id' => 1,
+                        'user_id' => auth()->id(),
+                        'action' => 'TAMBAH',
+                        'description' => "Melakukan impor massal data Firewall ({$successCount} data berhasil).",
+                    ]);
+
+                    // Simpan data dari CSV Test ke Database
                     Firewall::create([
-                        'id_aset'                     => $row[1] ?? 'AST-' . uniqid(),
-                        'tanggal_mulai_aktif'         => $row[2] ?? now()->toDateString(),
-                        'status_kepemilikan'          => $row[3] ?? 'Milik PLN',
-                        'keterangan_status_kepemilikan'=> $row[4] ?? null,
-                        'status_kondisi_aset'         => $row[5] ?? 'baik',
-                        'status_operasional_aset'     => $row[6] ?? 'aktif',
-                        'tingkat_kritikalitas_aset'   => $row[7] ?? 'penting',
-                        'klasifikasi_keamanan_aset'   => $row[8] ?? 'internal',
-                        'deskripsi_tujuan'            => $row[9] ?? null,
-                        'lokasi_aset_saat_ini'        => $row[10] ?? 'Pusat',
-                        'keterangan_lokasi_aset'      => $row[11] ?? null,
-                        'tanggal_pemeriksaan_terakhir'=> $row[12] ?? null,
-                        'pic_pencatat'                => $row[13] ?? (auth()->user()->name ?? 'Admin'),
-                        'bidang_pencatat_aset'        => $row[14] ?? null,
-                        'merk'                        => $merk,
-                        'model'                       => $model,
-                        'serial_number'               => $serialNumber,
-                        'segmen_number'               => $segmenNumber,
-                        'segmen_tujuan'               => $segmenTujuan,
-                        'versi_firmware'              => $versiFirmware,
-                        'konsumsi_daya'               => $row[21] ?? null,
-                        'rack'                        => $row[22] ?? null,
-                        'masa_berlaku_garansi'        => $row[23] ?? null,
-                        'keterangan'                  => $row[24] ?? null,
+                        'id_aset'                       => 'FW-' . strtoupper(uniqid()), // ID Otomatis
+                        'tanggal_mulai_aktif'           => now()->toDateString(),
+                        'status_kepemilikan'            => 'Milik PLN',
+                        'status_kondisi_aset'           => strtolower(trim($kondisi)),
+                        'status_operasional_aset'       => strtolower(trim($operasional)),
+                        'tingkat_kritikalitas_aset'     => strtolower(trim($kritikalitas)),
+                        'klasifikasi_keamanan_aset'     => 'internal',
+                        'lokasi_aset_saat_ini'          => trim($lokasi),
+                        'pic_pencatat'                  => auth()->user()->name ?? 'Admin PLN',
+                        'merk'                          => trim($merk),
+                        'model'                         => trim($model),
+                        'versi_firmware_os'             => trim($versiFirmware),
+                        'segmen_number'                 => trim($segmenNumber),
+                        'segmen_tujuan'                 => trim($segmenTujuan),
+                        
+                        // Set null untuk data yang tidak ada di CSV test
+                        'keterangan_status_kepemilikan' => null,
+                        'deskripsi_tujuan_peran_fungsi' => null,
+                        'keterangan_lokasi_aset'        => null,
+                        'tanggal_pemeriksaan_terakhir'  => null,
+                        'bidang_pencatat_aset'          => null,
+                        'serial_number'                 => null,
+                        'konsumsi_daya'                 => null,
+                        'rack'                          => null,
+                        'masa_berlaku_garansi'          => null,
+                        'keterangan'                    => null,
                     ]);
 
                     $successCount++;
                 }
 
-            } catch (Exception $e) {
+                fclose($handle);
+
+            } catch (\Exception $e) {
+                if (isset($handle) && is_resource($handle)) {
+                    fclose($handle);
+                }
                 return back()->with('error', 'Gagal memproses file ' . $file->getClientOriginalName() . ': ' . $e->getMessage());
             }
         }
 
-        $message = "Berhasil mengimpor {$successCount} data asset firewall.";
+        $message = "Berhasil mengimpor {$successCount} data asset firewall dari file test.";
         if (count($skippedReasons) > 0) {
             session()->flash('import_skipped_reasons', $skippedReasons);
         }
 
-        return back()->with('success', $message);
+        return redirect()
+            ->route('manage-firewall')
+            ->with('success', $message);
     }
 
+    /**
+     * SIMPAN FIREWALL BARU (MANUAL)
+     */
     public function store(Request $request)
     {
         $validated = $this->validateFirewall($request);
@@ -186,8 +234,15 @@ class FirewallController extends Controller
 
         Firewall::create($data);
 
+        AssetHistory::create([
+            'asset_id' => $firewall->id_aset ?? 'FIREWALL',
+            'user_id' => auth()->id(),
+            'action' => 'TAMBAH',
+            'description' => 'Menambahkan aset Firewall baru: ' . $firewall->merk . ' ' . $firewall->model,
+        ]);
+
         return redirect()
-            ->route('manage-asset') // Disesuaikan dengan route list Anda sebelumnya
+            ->route('manage-firewall') 
             ->with('success', 'Aset Firewall berhasil ditambahkan!');
     }
 
@@ -196,7 +251,7 @@ class FirewallController extends Controller
      */
     public function edit($id)
     {
-        $asset = Firewall::findOrFail($id); // Diubah dari $firewall ke $asset
+        $asset = Firewall::findOrFail($id); 
 
         return view('firewallForm', compact('asset'));
     }
@@ -215,8 +270,15 @@ class FirewallController extends Controller
 
         $firewall->update($validated);
 
+        AssetHistory::create([
+            'asset_id' => $firewall->id ?? 'FIREWALL',
+            'user_id' => auth()->id(),
+            'action' => 'UBAH',
+            'description' => 'Memperbarui data aset Firewall: ' . $firewall->id_aset,
+        ]);
+
         return redirect()
-            ->route('manage-asset') // Disesuaikan dengan route list Anda sebelumnya
+            ->route('manage-firewall') 
             ->with('success', 'Aset Firewall berhasil diperbarui!');
     }
 
@@ -228,8 +290,15 @@ class FirewallController extends Controller
         $firewall = Firewall::findOrFail($id);
         $firewall->delete();
 
+        AssetHistory::create([
+            'asset_id' => $firewall->id ?? 'FIREWALL',
+            'user_id' => auth()->id(),
+            'action' => 'HAPUS',
+            'description' => 'Menghapus aset Firewall: ' . $firewall->id_aset,
+        ]);
+
         return redirect()
-            ->route('manage-asset') // Disesuaikan dengan route list Anda sebelumnya
+            ->route('manage-firewall') 
             ->with('success', 'Data Firewall berhasil dihapus.');
     }
 
@@ -256,14 +325,14 @@ class FirewallController extends Controller
             'serial_number' => ['nullable', 'string', 'max:255'],
             'segmen_number' => ['required', 'string'],
             'segmen_tujuan' => ['required', 'string'],
-            'versi_firmware' => ['required', 'string', 'max:255'], // Diubah dari versi_firmware_os agar cocok dengan form
-            'konsumsi_daya' => ['nullable', 'numeric'], // Diubah dari integer ke numeric agar support desimal (step 0.01)
+            'versi_firmware_os' => ['required', 'string', 'max:255'], 
+            'konsumsi_daya' => ['nullable', 'numeric'], 
             'rack' => ['nullable', 'string', 'max:255'],
             'masa_berlaku_garansi' => ['nullable', 'date'],
             'status_kepemilikan' => ['nullable', 'string', 'max:255'],
-            'ket_status_kepemilikan' => ['nullable', 'string', 'max:255'],
+            'keterangan_status_kepemilikan' => ['nullable', 'string', 'max:255'], // Disamakan dengan DB (bukan ket_status...)
             'klasifikasi_keamanan_aset' => ['nullable', 'string', 'max:255'],
-            'deskripsi_tujuan' => ['nullable', 'string'],
+            'deskripsi_tujuan_peran_fungsi' => ['nullable', 'string'], // Disamakan dengan DB
             'keterangan_lokasi_aset' => ['nullable', 'string'],
             'tanggal_pemeriksaan_terakhir' => ['nullable', 'date'],
             'tanggal_mulai_aktif' => ['nullable', 'date'],
@@ -271,5 +340,24 @@ class FirewallController extends Controller
             'bidang_pencatat_aset' => ['nullable', 'string', 'max:255'],
             'keterangan' => ['nullable', 'string', 'max:255'],
         ]);
+    }
+
+    public function history(Request $request)
+    {
+        $query = \App\Models\AssetHistory::with('user')->latest();
+
+        // Opsional: Fitur pencarian pada halaman riwayat perubahan
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                ->orWhere('asset_id', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $histories = $query->paginate(15)->withQueryString();
+
+        return view('assetHistory', compact('histories'));
     }
 }

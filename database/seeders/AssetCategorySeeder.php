@@ -15,6 +15,9 @@ class AssetCategorySeeder extends Seeder
             ['name' => 'Router', 'slug' => 'router', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Switch', 'slug' => 'switch', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Firewall', 'slug' => 'firewall', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Modem', 'slug' => 'modem', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Server Baremetal', 'slug' => 'server-baremetal', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Server Fisik', 'slug' => 'server-fisik', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }

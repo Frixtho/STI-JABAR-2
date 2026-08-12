@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Models\AccessPoint;
+use App\Models\AssetHistory;
 use Illuminate\Http\Request;
 
 class AccessPointController extends Controller
@@ -71,72 +72,143 @@ class AccessPointController extends Controller
     }
 
     // Memproses file Excel / CSV yang di-upload
+    /**
+     * PROSES SIMPAN IMPORT DATA ACCESS POINT (MENGGUNAKAN CSV MURNI)
+     */
     public function importStore(Request $request)
     {
+        // 1. Validasi HANYA menerima CSV atau TXT
         $request->validate([
-            'files' => 'required',
-            'files.*' => 'required|mimes:xlsx,xls,csv,txt'
+            'files'   => ['required', 'array'],
+            'files.*' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
+        if (!$request->hasFile('files')) {
+            return back()->with('error', 'Tidak ada file yang diunggah.');
+        }
+
         $skippedReasons = [];
+        $successCount = 0;
+
+        AssetHistory::create([
+            'asset_id' => 1,
+            'user_id' => auth()->id(),
+            'action' => 'TAMBAH',
+            'description' => "Melakukan impor massal data Access Point ({$successCount} data berhasil).",
+        ]);
 
         foreach ($request->file('files') as $file) {
-            $spreadsheet = IOFactory::load($file->getRealPath());
-            $sheet = $spreadsheet->getActiveSheet();
-            $rows = $sheet->toArray();
+            try {
+                $handle = fopen($file->getRealPath(), 'r');
 
-            // Lewati baris header (Baris 0 dan 1 berdasarkan struktur excel template)
-            foreach (array_slice($rows, 2) as $index => $row) {
-                // Pastikan baris tidak kosong (cek kolom merk/model atau nama asset)
-                if (empty($row[15]) && empty($row[16])) { 
-                    continue; 
-                }
+                // Deteksi Delimiter (koma atau titik koma)
+                $sampleLine = fgets($handle);
+                rewind($handle);
+                $delimiter = (substr_count($sampleLine, ';') > substr_count($sampleLine, ',')) ? ';' : ',';
 
-                try {
-                    // Mapping kolom sesuai urutan header template Excel Access Point:
-                    // Kolom ke-1: Tanggal Perolehan, dst.
-                    AccessPoint::create([
-                        'tanggal_perolehan'         => $row[2] ?? null,
-                        'status_kepemilikan'        => $row[3] ?? null,
-                        'ket_status_kepemilikan'    => $row[4] ?? null,
-                        'status_kondisi'            => $row[5] ?? null,
-                        'status_operasional'        => $row[6] ?? null,
-                        'tingkat_kritikalitas'      => $row[7] ?? null,
-                        'klasifikasi_keamanan'      => $row[8] ?? null,
-                        'deskripsi_tujuan'          => $row[9] ?? null,
-                        'lokasi_aset'               => $row[10] ?? null,
-                        'ket_lokasi_aset'           => $row[11] ?? null,
-                        'tanggal_pemeriksaan'       => $row[12] ?? null,
-                        'pic_pencatat'              => $row[13] ?? null,
-                        'bidang_pencatat'           => $row[14] ?? null,
-                        'merk'                      => $row[15] ?? null,
-                        'model'                     => $row[16] ?? null,
-                        'serial_number'             => $row[17] ?? null,
-                        'mac_address'               => $row[18] ?? null,
-                        'ip_address'                => $row[19] ?? null,
-                        'nama_ssid'                 => $row[20] ?? null,
-                        'frekuensi'                 => $row[21] ?? null,
-                        'menggunakan_poe'           => $row[22] ?? null,
-                        'standar_wifi'              => $row[23] ?? null,
-                        'enkripsi_wifi'             => $row[24] ?? null,
-                        'versi_firmware'            => $row[25] ?? null,
-                        'konsumsi_daya'             => $row[26] ?? null,
-                        'rack'                      => $row[27] ?? null,
-                        'masa_berlaku_garansi'      => $row[28] ?? null,
-                        'keterangan'                => $row[29] ?? null,
+                $rowIndex = 0;
+
+                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                    $rowIndex++;
+
+                    // Template resmi memiliki 5 baris header/penjelasan. Data mulai di baris ke-6.
+                    if ($rowIndex <= 5) {
+                        continue;
+                    }
+
+                    // Pastikan baris memiliki jumlah kolom yang cukup (minimal sampai Keterangan - index 29)
+                    if (count($row) < 30) {
+                        $skippedReasons[] = "Baris ke-{$rowIndex} dilewati: Format kolom tidak sesuai template resmi Access Point (kurang dari 30 kolom).";
+                        continue;
+                    }
+
+                    // Melewati baris jika ID Aset (1) & Merk (15) kosong (dianggap baris kosong)
+                    if (empty(trim($row[1] ?? '')) && empty(trim($row[15] ?? ''))) {
+                        continue;
+                    }
+
+                    // Pemetaan Index Column CSV sesuai TEMPLATE RESMI ACCESS POINT (Total 30 Kolom)
+                    $merk           = $row[15] ?? null;
+                    $model          = $row[16] ?? null;
+                    $serialNumber   = $row[17] ?? null;
+                    $macAddress     = $row[18] ?? null;
+                    $ipAddress      = $row[19] ?? null;
+                    $namaSsid       = $row[20] ?? null;
+                    $frekuensi      = $row[21] ?? null;
+                    $menggunakanPoe = $row[22] ?? null;
+                    $standarWifi    = $row[23] ?? null;
+                    $enkripsiWifi   = $row[24] ?? null;
+                    $versiFirmware  = $row[25] ?? null;
+
+                    // Helper aman untuk parsing tanggal Excel/CSV
+                    $parseDate = function($val) {
+                        $v = trim($val ?? '');
+                        if (empty($v)) return null;
+                        // Coba convert format DD-MM-YYYY atau standar lainnya ke Y-m-d
+                        $time = strtotime($v);
+                        return $time ? date('Y-m-d', $time) : null;
+                    };
+
+                    $tglAktif       = $parseDate($row[2] ?? '') ?? now()->toDateString();
+                    $tglPemeriksaan = $parseDate($row[12] ?? '');
+                    $tglGaransi     = $parseDate($row[28] ?? '');
+
+                    // Simpan data dari CSV ke Database
+                    \App\Models\AccessPoint::create([
+                        'id_aset'                       => !empty(trim($row[1] ?? '')) ? trim($row[1]) : 'AP-' . strtoupper(uniqid()),
+                        'tanggal_perolehan'             => $tglAktif,
+                        'status_kepemilikan'            => trim($row[3] ?? 'Milik PLN'),
+                        'keterangan_status_kepemilikan' => trim($row[4] ?? ''),
+                        'status_kondisi'                => strtolower(trim($row[5] ?? 'baik')),
+                        'status_operasional'            => strtolower(trim($row[6] ?? 'aktif')),
+                        'tingkat_kritikalitas'          => strtolower(trim($row[7] ?? 'normal')),
+                        'klasifikasi_keamanan'          => strtolower(trim($row[8] ?? 'publik')),
+                        'deskripsi_fungsi'              => trim($row[9] ?? ''),
+                        'lokasi_aset_saat_ini'          => trim($row[10] ?? 'Pusat'),
+                        'kode_lokasi'                   => trim($row[10] ?? '-'), // <--- DITAMBAHKAN AGAR TIDAK ERROR NOT NULL
+                        'keterangan_lokasi'             => trim($row[11] ?? ''),
+                        'tanggal_pemeriksaan_terakhir'  => $tglPemeriksaan,
+                        'pic_pencatat'                  => trim($row[13] ?? '') ?: (auth()->user()->name ?? 'Admin PLN'),
+                        'bidang_pencatat_aset'          => trim($row[14] ?? ''),
+                        'merk'                          => trim($merk),
+                        'model'                         => trim($model),
+                        'serial_number'                 => trim($serialNumber),
+                        'mac_address'                   => trim($macAddress),
+                        'ip_address'                    => trim($ipAddress),
+                        'nama_ssid'                     => trim($namaSsid),
+                        'frekuensi'                     => trim($frekuensi),
+                        'menggunakan_poe'               => trim($menggunakanPoe),
+                        'standar_wifi'                  => trim($standarWifi),
+                        'enkripsi_wifi'                 => trim($enkripsiWifi),
+                        'versi_firmware'                => trim($versiFirmware),
+                        'konsumsi_daya'                 => !empty(trim($row[26] ?? '')) ? (float) trim($row[26]) : null,
+                        'rack'                          => trim($row[27] ?? ''),
+                        'masa_berlaku_garansi'          => $tglGaransi,
+                        'keterangan'                    => trim($row[29] ?? ''),
                     ]);
-                } catch (\Exception $e) {
-                    $skippedReasons[] = "Baris " . ($index + 3) . ": " . $e->getMessage();
+
+                    $successCount++;
                 }
+
+                fclose($handle);
+
+            } catch (\Exception $e) {
+                if (isset($handle) && is_resource($handle)) {
+                    fclose($handle);
+                }
+                return back()->with('error', 'Gagal memproses file ' . $file->getClientOriginalName() . ': ' . $e->getMessage());
             }
         }
 
+        $message = "Berhasil mengimpor {$successCount} data Asset Access Point.";
         if (count($skippedReasons) > 0) {
-            return redirect()->back()->with('success', 'Import selesai dengan beberapa catatan.')
-                             ->with('import_skipped_reasons', $skippedReasons);
+            session()->flash('import_skipped_reasons', $skippedReasons);
         }
 
-        return redirect()->route('manage-asset')->with('success', 'Data Access Point berhasil di-import!');
+        // PERBAIKAN REDIRECT (diubah ke index access point)
+        return redirect()
+            ->route('manage-access-point')
+            ->with('success', $message);
     }
 
     public function store(Request $request)
@@ -165,6 +237,13 @@ class AccessPointController extends Controller
         $validated['pic_pencatat'] = auth()->user()->name ?? 'Admin';
 
         AccessPoint::create($validated);
+
+        AssetHistory::create([
+            'asset_id' => $accessPoint->id_aset ?? 'ACCESS-POINT',
+            'user_id' => auth()->id(),
+            'action' => 'TAMBAH',
+            'description' => 'Menambahkan aset Access Point baru: ' . $accessPoint->merk . ' ' . $accessPoint->model,
+        ]);
 
         return redirect()
             ->route('manage-access-point')
@@ -202,6 +281,14 @@ class AccessPointController extends Controller
 
         $accessPoint->update($validated);
 
+        // CATAT RIWAYAT PERUBAHAN (Gunakan $accessPoint->id agar berupa angka integer)
+        \App\Models\AssetHistory::create([
+            'asset_id' => $accessPoint->id, // <--- Perbaikan di sini (menggunakan ID angka)
+            'user_id' => auth()->id(),
+            'action' => 'UBAH',
+            'description' => 'Memperbarui data aset Access Point: ' . $accessPoint->id_aset,
+        ]);
+
         return redirect()
             ->route('manage-access-point')
             ->with('success', 'Access Point berhasil diperbarui.');
@@ -217,8 +304,34 @@ class AccessPointController extends Controller
     {
         $accessPoint->delete();
 
+        AssetHistory::create([
+            'asset_id' => $accessPoint->id ?? 'ACCESS-POINT',
+            'user_id' => auth()->id(),
+            'action' => 'HAPUS',
+            'description' => 'Menghapus aset Access Point: ' . $accessPoint->id_aset,
+        ]);
+
         return redirect()
             ->route('manage-access-point')
             ->with('success', 'Access Point berhasil dihapus.');
+    }
+
+    public function history(Request $request)
+    {
+        $query = \App\Models\AssetHistory::with('user')->latest();
+
+        // Opsional: Fitur pencarian pada halaman riwayat perubahan
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                ->orWhere('asset_id', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $histories = $query->paginate(15)->withQueryString();
+
+        return view('assetHistory', compact('histories'));
     }
 }

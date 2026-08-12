@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Switche;
+use App\Models\AssetHistory;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -71,15 +72,139 @@ class SwitchController extends Controller
         return view('switchImport'); 
     }
 
-    public function importStore(\Illuminate\Http\Request $request)
+    /**
+     * PROSES SIMPAN IMPORT DATA SWITCH
+     */
+    /**
+     * PROSES SIMPAN IMPORT DATA SWITCH (MENGGUNAKAN CSV MURNI)
+     */
+    public function importStore(Request $request)
     {
-        // Validasi dan logika proses import file Excel/CSV di sini
+        // 1. Validasi HANYA menerima CSV atau TXT
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv',
+            'files'   => ['required', 'array'],
+            'files.*' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
-        // Contoh redirect setelah sukses
-        return redirect()->route('manage-switch')->with('success', 'Data switch berhasil diimport.');
+        if (!$request->hasFile('files')) {
+            return back()->with('error', 'Tidak ada file yang diunggah.');
+        }
+
+        $skippedReasons = [];
+        $successCount = 0;
+
+        AssetHistory::create([
+            'asset_id' => 1,
+            'user_id' => auth()->id(),
+            'action' => 'TAMBAH',
+            'description' => "Melakukan impor massal data Switch ({$successCount} data berhasil).",
+        ]);
+
+        foreach ($request->file('files') as $file) {
+            try {
+                $handle = fopen($file->getRealPath(), 'r');
+
+                // Deteksi Delimiter (koma atau titik koma)
+                $sampleLine = fgets($handle);
+                rewind($handle);
+                $delimiter = (substr_count($sampleLine, ';') > substr_count($sampleLine, ',')) ? ';' : ',';
+
+                $rowIndex = 0;
+
+                while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                    $rowIndex++;
+
+                    // Template resmi memiliki 5 baris header/penjelasan. Data mulai di baris ke-6.
+                    if ($rowIndex <= 5) {
+                        continue;
+                    }
+
+                    // Pastikan baris memiliki jumlah kolom yang cukup (minimal sampai Firmware - index 23)
+                    if (count($row) < 24) {
+                        $skippedReasons[] = "Baris ke-{$rowIndex} dilewati: Format kolom tidak sesuai template resmi.";
+                        continue;
+                    }
+
+                    // Melewati baris jika ID Aset (1) & Merk (15) kosong (dianggap baris kosong)
+                    if (empty(trim($row[1] ?? '')) && empty(trim($row[15] ?? ''))) {
+                        continue;
+                    }
+
+                    // Pemetaan Index Column CSV sesuai TEMPLATE RESMI SWITCH
+                    $merk               = $row[15] ?? null;
+                    $model              = $row[16] ?? null;
+                    $fungsiSwitch       = $row[17] ?? null;
+                    $serialNumber       = $row[18] ?? null;
+                    $macAddress         = $row[19] ?? null;
+                    $ipAddress          = $row[20] ?? null;
+                    $jumlahKecepatanPort= $row[21] ?? null;
+                    $supportPoe         = $row[22] ?? null;
+                    $versiFirmware      = $row[23] ?? null;
+
+                    // Validasi: Wajib isi Merk dan Model
+                    if (empty(trim($merk)) || empty(trim($model))) {
+                        $skippedReasons[] = "Baris ke-{$rowIndex} dilewati: Kolom Merk atau Model kosong.";
+                        continue;
+                    }
+
+                    // Format tanggal (handling jika format dari CSV tidak sesuai)
+                    $tglPerolehan = !empty(trim($row[2] ?? '')) ? date('Y-m-d', strtotime(trim($row[2]))) : now()->toDateString();
+                    $tglPemeriksaan = !empty(trim($row[12] ?? '')) ? date('Y-m-d', strtotime(trim($row[12]))) : null;
+                    $tglGaransi = !empty(trim($row[26] ?? '')) ? date('Y-m-d', strtotime(trim($row[26]))) : null;
+
+                    // Simpan data dari CSV ke Database
+                    Switche::create([
+                        'id_aset'                      => !empty(trim($row[1] ?? '')) ? trim($row[1]) : 'SW-' . strtoupper(uniqid()),
+                        'tanggal_perolehan'            => $tglPerolehan,
+                        'status_kepemilikan'           => trim($row[3] ?? 'Milik PLN'),
+                        'keterangan_kepemilikan'       => trim($row[4] ?? ''),
+                        'status_kondisi'               => strtolower(trim($row[5] ?? 'baik')),
+                        'status_operasional'           => strtolower(trim($row[6] ?? 'aktif')),
+                        'tingkat_kritikalitas'         => strtolower(trim($row[7] ?? 'normal')),
+                        'klasifikasi_keamanan'         => strtolower(trim($row[8] ?? 'internal')),
+                        'deskripsi_fungsi_aset'        => trim($row[9] ?? ''),
+                        'lokasi_aset_saat_ini'         => trim($row[10] ?? 'Pusat'),
+                        'keterangan_lokasi'            => trim($row[11] ?? ''),
+                        'tanggal_pemeriksaan_terakhir' => $tglPemeriksaan,
+                        'pic_pencatat'                 => trim($row[13] ?? '') ?: (auth()->user()->name ?? 'Admin PLN'),
+                        'bidang_pencatat_aset'         => trim($row[14] ?? ''),
+                        'merk'                         => trim($merk),
+                        'model'                        => trim($model),
+                        'tipe_switch'                  => trim($fungsiSwitch), // Tipe Switch = Fungsi Switch
+                        'serial_number'                => trim($serialNumber),
+                        'mac_address'                  => trim($macAddress),
+                        'ip_address'                   => trim($ipAddress),
+                        'jumlah_port'                  => trim($jumlahKecepatanPort),
+                        'mendukung_poe'                => trim($supportPoe),
+                        'versi_firmware'               => trim($versiFirmware),
+                        'konsumsi_daya'                => trim($row[24] ?? ''),
+                        'rack'                         => trim($row[25] ?? ''),
+                        'masa_berlaku_garansi'         => $tglGaransi,
+                        'keterangan'                   => trim($row[27] ?? ''),
+                        'kode_lokasi'                  => '-', // Default
+                    ]);
+
+                    $successCount++;
+                }
+
+                fclose($handle);
+
+            } catch (\Exception $e) {
+                if (isset($handle) && is_resource($handle)) {
+                    fclose($handle);
+                }
+                return back()->with('error', 'Gagal memproses file ' . $file->getClientOriginalName() . ': ' . $e->getMessage());
+            }
+        }
+
+        $message = "Berhasil mengimpor {$successCount} data asset Switch & TOR Switch.";
+        if (count($skippedReasons) > 0) {
+            session()->flash('import_skipped_reasons', $skippedReasons);
+        }
+
+        return redirect()
+            ->route('manage-switch')
+            ->with('success', $message);
     }
 
     public function import(Request $request)
@@ -114,7 +239,7 @@ class SwitchController extends Controller
                          ->with('import_skipped_reasons', $skippedReasons);
         }
 
-        return redirect()->route('manage-asset')->with('success', 'Semua data Asset Switch berhasil diimport!');
+        return redirect()->route('manage-switch')->with('success', 'Semua data Asset Switch berhasil diimport!');
     }
 
     public function create()
@@ -135,6 +260,12 @@ class SwitchController extends Controller
         | Kolom NOT NULL yang belum ada di form
         |--------------------------------------------------------------------------
         */
+        AssetHistory::create([
+            'asset_id' => $switch->id_aset ?? 'SWITCH',
+            'user_id' => auth()->id(),
+            'action' => 'TAMBAH',
+            'description' => 'Menambahkan aset Switch baru: ' . $switch->merk . ' ' . $switch->model,
+        ]);
 
         $data = array_merge([
             'tanggal_perolehan' => now()->toDateString(),
@@ -183,6 +314,13 @@ class SwitchController extends Controller
 
         $switch->update($validated);
 
+        AssetHistory::create([
+            'asset_id' => $switch->id ?? 'SWITCH',
+            'user_id' => auth()->id(),
+            'action' => 'UBAH',
+            'description' => 'Memperbarui data aset Switch: ' . $switch->id_aset,
+        ]);
+
         return redirect()
             ->route('manage-switch')
             ->with('success', 'Aset Switch berhasil diperbarui!');
@@ -197,6 +335,13 @@ class SwitchController extends Controller
         $switch = Switche::findOrFail($id);
 
         $switch->delete();
+
+        AssetHistory::create([
+            'asset_id' => $switch->id ?? 'SWITCH',
+            'user_id' => auth()->id(),
+            'action' => 'HAPUS',
+            'description' => 'Menghapus aset Switch: ' . $switch->id_aset,
+        ]);
 
         return redirect()
             ->route('manage-switch')
@@ -341,5 +486,24 @@ class SwitchController extends Controller
                 'max:255',
             ],
         ]);
+    }
+
+    public function history(Request $request)
+    {
+        $query = \App\Models\AssetHistory::with('user')->latest();
+
+        // Opsional: Fitur pencarian pada halaman riwayat perubahan
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                ->orWhere('asset_id', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $histories = $query->paginate(15)->withQueryString();
+
+        return view('assetHistory', compact('histories'));
     }
 }

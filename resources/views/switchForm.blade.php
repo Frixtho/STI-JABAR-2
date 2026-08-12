@@ -386,22 +386,19 @@
                     {{-- ROW 5: PIC Pencatat & Bidang Pencatat --}}
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                        {{-- PIC PENCATAT --}}
+                        {{-- PIC Pencatat --}}
                         <div>
                             <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
                                 PIC Pencatat <span class="text-red-500">*</span>
                             </label>
-                            <input
-                                type="text"
-                                name="pic_pencatat"
-                                value="{{ old('pic_pencatat', $switch->pic_pencatat ?? '') }}"
-                                required
-                                placeholder="Nama personil pencatat"
-                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600
-                                       bg-white dark:bg-gray-700 py-2.5 px-3 text-sm
-                                       text-gray-800 dark:text-white placeholder-gray-400
-                                       focus:border-[#004A54] focus:outline-none
-                                       focus:ring-1 focus:ring-[#004A54]"
+                            <input 
+                                type="text" 
+                                name="pic_pencatat" 
+                                {{-- PERUBAHAN DI SINI: Tambahkan fallback ke nama user yang login --}}
+                                value="{{ old('pic_pencatat', $switch->pic_pencatat ?? auth()->user()->name) }}" 
+                                required 
+                                placeholder="Nama personil yang mencatat"
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]"
                             >
                         </div>
 

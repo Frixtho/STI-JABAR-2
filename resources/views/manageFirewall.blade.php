@@ -75,104 +75,55 @@
         
     {{-- FLASH --}}
     @if(session('success'))
-        <div class="rounded-md border border-green-200
-                    bg-green-50 px-4 py-3
-                    text-sm text-green-700">
+        <div class="mx-6 mt-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
             {{ session('success') }}
         </div>
     @endif
 
     @if(session('error'))
-        <div class="rounded-md border border-red-200
-                    bg-red-50 px-4 py-3
-                    text-sm text-red-700">
+        <div class="mx-6 mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {{ session('error') }}
         </div>
     @endif
 
 
     {{-- SEARCH --}}
-    <form
-        method="GET"
-        action="{{ route('manage-firewall') }}"
-        class="bg-white rounded-xl
-               border border-gray-200
-               shadow-sm p-3"
-    >
-
-        <div class="flex items-center gap-3">
-
-            <div class="relative flex-1">
-
-                <svg
-                    class="absolute left-3 top-1/2
-                           -translate-y-1/2
-                           w-4 h-4 text-gray-400"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                >
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                </svg>
-
-                <input
-                    type="text"
-                    name="search"
-                    value="{{ request('search') }}"
-                    placeholder="Cari ID Aset, merk, model, serial number, segmen, lokasi, PIC..."
-                    class="w-full rounded-md
-                           border border-gray-300
-                           pl-10 pr-4 py-2.5
-                           text-sm
-                           focus:border-[#004A54]
-                           focus:outline-none
-                           focus:ring-1 focus:ring-[#004A54]"
-                >
-
+    <div class="mx-6 mt-4">
+        <form
+            method="GET"
+            action="{{ route('manage-firewall') }}"
+            class="bg-white rounded-xl border border-gray-200 shadow-sm p-3"
+        >
+            <div class="flex items-center gap-3">
+                <div class="relative flex-1">
+                    <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input
+                        type="text"
+                        name="search"
+                        value="{{ request('search') }}"
+                        placeholder="Cari ID Aset, merk, model, serial number, segmen, lokasi, PIC..."
+                        class="w-full rounded-md border border-gray-300 pl-10 pr-4 py-2.5 text-sm focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]"
+                    >
+                </div>
+                <button type="submit" class="px-5 py-2.5 rounded-md bg-[#004A54] text-white text-sm font-medium hover:bg-[#00363d]">
+                    Cari
+                </button>
+                <a href="{{ route('manage-firewall') }}" class="px-5 py-2.5 rounded-md border border-[#004A54] text-[#004A54] text-sm font-medium hover:bg-gray-50">
+                    Reset
+                </a>
             </div>
-
-            <button
-                type="submit"
-                class="px-5 py-2.5
-                       rounded-md
-                       bg-[#004A54]
-                       text-white
-                       text-sm font-medium
-                       hover:bg-[#00363d]"
-            >
-                Cari
-            </button>
-
-            <a
-                href="{{ route('manage-firewall') }}"
-                class="px-5 py-2.5
-                       rounded-md
-                       border border-[#004A54]
-                       text-[#004A54]
-                       text-sm font-medium
-                       hover:bg-gray-50"
-            >
-                Reset
-            </a>
-
-        </div>
-
-    </form>
+        </form>
+    </div>
 
 
     {{-- TABLE --}}
-    <div class="bg-white rounded-xl
-                border border-gray-200
-                shadow-sm overflow-hidden">
-
+    <div class="mx-6 mt-4 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden mb-10">
         <div class="overflow-x-auto">
-
             <table class="w-full text-sm whitespace-nowrap">
-
                 <thead class="bg-gray-50 border-b border-gray-200">
-
                     <tr class="text-left">
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">ID Aset / Merk</th>
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">Serial Number / Segmen</th>
@@ -183,16 +134,11 @@
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase">PIC / Bidang</th>
                         <th class="px-5 py-4 text-xs font-bold text-gray-500 uppercase text-right sticky right-0 bg-gray-50 shadow-l">Aksi</th>
                     </tr>
-
                 </thead>
 
-
                 <tbody class="divide-y divide-gray-100">
-
                     @forelse($firewalls as $firewall)
-
                         <tr class="hover:bg-gray-50 transition-colors">
-
                             {{-- ID Aset & Merk/Model --}}
                             <td class="px-5 py-4">
                                 <span class="font-semibold text-[#004A54] block">
@@ -257,12 +203,12 @@
                                 <div class="text-[10px] text-gray-400">{{ $firewall->bidang_pencatat_aset ?? '-' }}</div>
                             </td>
 
-                            {{-- Aksi --}}
+                            {{-- Aksi (PERBAIKAN ROUTE) --}}
                             <td class="px-5 py-4 text-right sticky right-0 bg-white shadow-l">
                                 <div class="flex items-center justify-end gap-2">
 
                                     <a
-                                        href="{{ route('manage-firewall.edit', $firewall->id) }}"
+                                        href="{{ route('manage-asset.firewall.edit', $firewall->id) }}"
                                         title="Edit"
                                         class="w-9 h-9
                                                flex items-center justify-center
@@ -278,7 +224,7 @@
                                     </a>
 
                                     <form
-                                        action="{{ route('manage-firewall.destroy', $firewall->id) }}"
+                                        action="{{ route('manage-asset.firewall.destroy', $firewall->id) }}"
                                         method="POST"
                                         onsubmit="return confirm('Hapus firewall {{ $firewall->id_aset }}?')"
                                     >
@@ -331,7 +277,6 @@
 
         </div>
 
-
         <div class="flex items-center justify-between
                     px-5 py-4
                     border-t border-gray-100
@@ -355,6 +300,7 @@
 
     </div>
 
-</main>
+    </div>
+</div>
 
 @endsection

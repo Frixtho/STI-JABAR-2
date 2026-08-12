@@ -606,9 +606,21 @@ class AssetController extends Controller
         return $angle * $earthRadius;
     }
 
-    public function history()
+    public function history(Request $request)
     {
-        $histories = \App\Models\AssetHistory::with('user')->latest()->paginate(10);
+        $query = \App\Models\AssetHistory::with('user')->latest();
+
+        // Opsional: Fitur pencarian pada halaman riwayat perubahan
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function($q) use ($search) {
+                $q->where('action', 'like', "%{$search}%")
+                ->orWhere('asset_id', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $histories = $query->paginate(15)->withQueryString();
 
         return view('assetHistory', compact('histories'));
     }

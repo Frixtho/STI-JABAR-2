@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Tambah Pengguna Baru — PLN Financial'])
+@extends('layouts.app', ['title' => (($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna Baru') . ' — PLN Financial'])
 
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
@@ -28,13 +28,13 @@
                     </button>
                     <div class="flex items-center gap-2">
                         <div class="text-right leading-tight">
-                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ auth()->user()->name }}</p>
-                            <p class="text-[10px] font-semibold uppercase tracking-wide {{ strcasecmp(auth()->user()->role, 'Admin') === 0 ? 'text-accent-500' : 'text-gray-400 dark:text-gray-500' }}">
-                                {{ auth()->user()->role }}
+                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ auth()->user()->name ?? 'Admin PLN' }}</p>
+                            <p class="text-[10px] font-semibold uppercase tracking-wide {{ strcasecmp(auth()->user()->role ?? '', 'Admin') === 0 ? 'text-accent-500' : 'text-gray-400 dark:text-gray-500' }}">
+                                {{ auth()->user()->role ?? 'Admin' }}
                             </p>
                         </div>
                         <div class="w-8 h-8 rounded-full bg-pln-800 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
-                            {{ implode('', array_map(fn($w) => $w[0] ?? '', array_slice(explode(' ', auth()->user()->name), 0, 2))) }}
+                            {{ implode('', array_map(fn($w) => $w[0] ?? '', array_slice(explode(' ', auth()->user()->name ?? 'Admin PLN'), 0, 2))) }}
                         </div>
                     </div>
                 </div>
@@ -48,10 +48,10 @@
                     <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
-                    <span class="text-gray-400">Tambah Pengguna</span>
+                    <span class="text-gray-400">{{ ($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna' }}</span>
                 </div>
 
-                <h1 class="text-2xl font-bold text-[#063333] dark:text-white">Tambah Pengguna Baru</h1>
+                <h1 class="text-2xl font-bold text-[#063333] dark:text-white">{{ ($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna Baru' }}</h1>
 
                 @if ($errors->any())
                     <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
@@ -74,69 +74,92 @@
                         </div>
                         <div>
                             <h2 class="text-base font-bold text-gray-800 dark:text-gray-100">Informasi Akun</h2>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Lengkapi detail profil dan peran pengguna di bawah ini.</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Lengkapi detail profil, akses, dan kata sandi pengguna di bawah ini.</p>
                         </div>
                     </div>
 
                     {{-- Body Form --}}
-                    <form action="{{ route('manage-user.store') }}" method="POST" class="p-6 space-y-5">
+                    <form action="{{ ($user ?? false) ? route('manage-user.update', $user->id) : route('manage-user.store') }}" method="POST" class="p-6 space-y-5">
                         @csrf
+                        @if ($user ?? false) @method('PATCH') @endif
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                             {{-- Nama Lengkap --}}
                             <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Nama Lengkap</label>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Nama Lengkap *</label>
                                 <div class="relative">
-                                    <input type="text" name="name" value="{{ old('name') }}" placeholder="Masukkan nama lengkap" required
-                                        class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 pl-3 pr-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
+                                    <input type="text" name="name" value="{{ old('name', $user->name ?? '') }}" placeholder="Masukkan nama lengkap" required
+                                        class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
                                 </div>
                             </div>
 
                             {{-- Alamat Email --}}
                             <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Alamat Email</label>
-                                <input type="email" name="email" value="{{ old('email') }}" placeholder="example@pln.co.id" required
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Alamat Email *</label>
+                                <input type="email" name="email" value="{{ old('email', $user->email ?? '') }}" placeholder="example@pln.co.id" required
                                     class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
+                            </div>
+
+                            {{-- Kata Sandi (Password) --}}
+                            <div class="space-y-1.5">
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Kata Sandi (Password) {{ ($user ?? false) ? '' : '*' }}</label>
+                                <input type="password" name="password" placeholder="{{ ($user ?? false) ? 'Kosongkan jika tidak ingin diubah' : 'Masukkan kata sandi' }}" {{ ($user ?? false) ? '' : 'required' }} minlength="8"
+                                    class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
+                                @if($user ?? false)
+                                    <p class="text-[10px] text-gray-400 mt-1">Biarkan kosong jika Anda tidak ingin mengganti password pengguna ini.</p>
+                                @endif
                             </div>
 
                             {{-- NIP --}}
                             <div class="space-y-1.5">
                                 <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Nomor Induk Pegawai (NIP)</label>
-                                <input type="text" name="nip" value="{{ old('nip') }}" placeholder="Contoh: 19920815XXXX" required
+                                <input type="text" name="nip" value="{{ old('nip', $user->nip ?? '') }}" placeholder="Contoh: 19920815XXXX (Isi '-' jika belum ada)" required
                                     class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
                             </div>
 
-                            {{-- Departemen --}}
+                            {{-- Departemen (Sesuai dengan Keterangan di Excel) --}}
                             <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Departemen</label>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Departemen / Unit / Keterangan *</label>
                                 <select name="department" required class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-[#064e57] focus:ring-1 focus:ring-[#064e57]">
-                                    <option value="" disabled {{ old('department') ? '' : 'selected' }}>Pilih Departemen</option>
-                                    <option value="Keuangan" @selected(old('department') === 'Keuangan')>Keuangan</option>
-                                    <option value="Sistem Informasi" @selected(old('department') === 'Sistem Informasi')>Sistem Informasi</option>
-                                    <option value="Sumber Daya Manusia (SDM)" @selected(old('department') === 'Sumber Daya Manusia (SDM)')>Sumber Daya Manusia (SDM)</option>
+                                    <option value="" disabled {{ old('department', $user->department ?? '') ? '' : 'selected' }}>Pilih Departemen / Unit</option>
+                                    @php
+                                        // Daftar Keterangan berdasarkan file Daftar User.xlsx
+                                        $departemenList = [
+                                            'PUSHARLIS', 'UID JAWA BARAT', 'UIP JBT', 'UIT JBT', 'UP2B JAWA BARAT',
+                                            'UP2D JAWA BARAT', 'UP3 BANDUNG', 'UP3 CIANJUR', 'UP3 CIMAHI', 'UP3 CIREBON',
+                                            'UP3 GARUT', 'UP3 INDRAMAYU', 'UP3 KARAWANG', 'UP3 MAJALAYA',
+                                            'UP3 PURWAKARTA', 'UP3 SUKABUMI', 'UP3 SUMEDANG', 'UP3 TASIKMALAYA',
+                                            'UPT CIREBON', 'UPT KARAWANG', 'USAT CIRATA', 'STI JABAR'
+                                        ];
+                                    @endphp
+                                    @foreach($departemenList as $dept)
+                                        <option value="{{ $dept }}" @selected(old('department', $user->department ?? '') == $dept)>{{ $dept }}</option>
+                                    @endforeach
+                                    {{-- Opsi tambahan untuk mengantisipasi data lama --}}
+                                    <option value="Lainnya" @selected(old('department', $user->department ?? '') == 'Lainnya')>Lainnya...</option>
                                 </select>
                             </div>
 
                             {{-- Peran/Role --}}
                             <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Peran/Role</label>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Peran/Role *</label>
                                 <select name="role" required class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-[#064e57] focus:ring-1 focus:ring-[#064e57]">
-                                    <option value="" disabled {{ old('role') ? '' : 'selected' }}>Pilih Peran</option>
-                                    <option value="Admin" @selected(old('role') === 'Admin')>Admin</option>
-                                    <option value="Manager" @selected(old('role') === 'Manager')>Manager</option>
-                                    <option value="Staff" @selected(old('role') === 'Staff')>Staff</option>
+                                    <option value="" disabled {{ old('role', $user->role ?? '') ? '' : 'selected' }}>Pilih Peran</option>
+                                    <option value="Admin" @selected(old('role', $user->role ?? '') === 'Admin')>Admin</option>
+                                    <option value="Manager" @selected(old('role', $user->role ?? '') === 'Manager')>Manager</option>
+                                    <option value="Staff" @selected(old('role', $user->role ?? '') === 'Staff')>Staff</option>
                                 </select>
                             </div>
 
                             {{-- Status Akun --}}
                             <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide block">Status Akun</label>
+                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide block">Status Akun *</label>
                                 <div class="flex items-center gap-4 pt-2">
-                                    <input type="radio" name="status" value="Aktif" id="aktif" {{ old('status', 'Aktif') == 'Aktif' ? 'checked' : '' }}>
-                                    <label for="aktif" class="text-sm text-gray-700 dark:text-gray-300">Aktif</label>
+                                    <input type="radio" name="status" value="Aktif" id="aktif" {{ old('status', $user->status ?? 'Aktif') == 'Aktif' ? 'checked' : '' }}>
+                                    <label for="aktif" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">Aktif</label>
 
-                                    <input type="radio" name="status" value="Non-Aktif" id="non-aktif" {{ old('status') == 'Non-Aktif' ? 'checked' : '' }}>
-                                    <label for="non-aktif" class="text-sm text-gray-700 dark:text-gray-300">Non-Aktif</label>
+                                    <input type="radio" name="status" value="Non-Aktif" id="non-aktif" {{ old('status', $user->status ?? '') == 'Non-Aktif' ? 'checked' : '' }}>
+                                    <label for="non-aktif" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">Non-Aktif</label>
                                 </div>
                             </div>
                         </div>
@@ -147,7 +170,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <p class="text-xs text-cyan-800 dark:text-cyan-300 leading-relaxed">
-                                Pengguna baru akan menerima email verifikasi untuk mengatur kata sandi mereka secara mandiri setelah akun dibuat oleh administrator.
+                                {{ ($user ?? false) ? 'Perubahan pada profil pengguna akan langsung berlaku. Jika Anda mengganti email atau password, pastikan untuk menginformasikan kepada pengguna bersangkutan.' : 'Akun baru akan dibuat dengan kata sandi yang Anda tentukan di atas. Harap berikan email dan kata sandi ini kepada pengguna agar dapat login.' }}
                             </p>
                         </div>
 
@@ -160,7 +183,7 @@
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
                                 </svg>
-                                Simpan Pengguna
+                                {{ ($user ?? false) ? 'Simpan Perubahan' : 'Simpan Pengguna' }}
                             </button>
                         </div>
                     </form>

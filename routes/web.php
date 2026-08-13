@@ -14,6 +14,9 @@ use App\Http\Controllers\SwitchController;
 use App\Http\Controllers\ServerBaremetalController;
 use App\Http\Controllers\ServerFisikController;
 use App\Http\Controllers\ModemController;
+use App\Http\Controllers\ServerStorageController;
+use App\Http\Controllers\UpsController;
+use App\Http\Controllers\WirelessLanController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -38,6 +41,9 @@ Route::middleware('auth')->group(function () {
     Route::get('settings', [SettingsController::class, 'edit'])->name('settings');
     Route::patch('settings', [SettingsController::class, 'update'])->name('settings.update');
     Route::patch('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
+    
+    // Tambahkan 1 baris ini di bawahnya:
+    Route::delete('settings/sessions', [SettingsController::class, 'logoutOtherDevices'])->name('settings.sessions.destroy');
 
     // ==========================================
     // MANAGE USER
@@ -45,6 +51,8 @@ Route::middleware('auth')->group(function () {
     Route::get('manage-user/create', [AddUserController::class, 'create'])->name('manage-user.create');
     Route::post('manage-user/store', [AddUserController::class, 'store'])->name('manage-user.store');
     Route::get('manage-user', [ManageUserController::class, 'index'])->name('manage-user');
+    Route::get('/import', [AddUserController::class, 'importForm'])->name('manage-user.import.form');
+    Route::post('/import', [AddUserController::class, 'importStore'])->name('manage-user.import.store');
     Route::get('manage-user/{id}/edit', [ManageUserController::class, 'edit'])->name('manage-user.edit');
     Route::patch('manage-user/{id}', [ManageUserController::class, 'update'])->name('manage-user.update');
     Route::delete('manage-user/{id}', [ManageUserController::class, 'destroy'])->name('manage-user.destroy');
@@ -68,7 +76,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/manage-asset/router', [RouterController::class, 'index'])->name('manage-router');
     Route::get('/manage-asset/router/create', [RouterController::class, 'create'])->name('manage-router.create');
     Route::get('/manage-asset/router/import', [RouterController::class, 'importForm'])->name('manage-router.import.form');
-    Route::post('/manage-asset/router/import', [RouterController::class, 'import'])->name('manage-asset.router.import');        // <- Tambahan Rute Proses Import
+    Route::post('/manage-asset/router/import', [RouterController::class, 'import'])->name('manage-asset.router.import');        
     Route::post('/manage-asset/router', [RouterController::class, 'store'])->name('manage-router.store');
     Route::get('/manage-asset/router/{id}/edit', [RouterController::class, 'edit'])->name('manage-router.edit');
     Route::patch('/manage-asset/router/{id}', [RouterController::class, 'update'])->name('manage-router.update');
@@ -87,30 +95,12 @@ Route::middleware('auth')->group(function () {
     Route::delete('/manage-asset/switch/{id}', [SwitchController::class, 'destroy'])->name('manage-switch.destroy');
 
     // ==========================================
-    // MANAGE TOWER
-    // ==========================================
-    Route::get('manage-tower', [AssetController::class, 'indexTower'])->name('manage-tower');
-    Route::get('manage-asset/tower/{tower}/edit', [AssetController::class, 'editTower'])->name('manage-asset.tower.edit');
-    Route::patch('manage-asset/tower/{tower}', [AssetController::class, 'updateTower'])->name('manage-asset.tower.update');
-    Route::delete('manage-asset/tower/{tower}', [AssetController::class, 'destroyTower'])->name('manage-asset.tower.destroy');
-
-    // ==========================================
-    // MANAGE ASSET (SUTT & Umum)
-    // ==========================================
-    Route::get('manage-asset/history', [AssetController::class, 'history'])->name('manage-asset.history');
-    Route::get('manage-asset/create', [AssetController::class, 'create'])->name('manage-asset.create');
-    Route::get('manage-asset/import', [AssetController::class, 'importForm'])->name('manage-asset.import.form');
-    Route::post('manage-asset/import', [AssetController::class, 'import'])->name('manage-asset.import');
-    Route::post('manage-asset', [AssetController::class, 'store'])->name('manage-asset.store');
-    Route::get('manage-asset', [AssetController::class, 'index'])->name('manage-asset');
-
-    // ==========================================
     // MANAGE ACCESS POINT
     // ==========================================
     Route::get('manage-asset/access-point', [AccessPointController::class, 'index'])->name('manage-access-point');
     Route::get('manage-asset/access-point/create', [AccessPointController::class, 'create'])->name('manage-access-point.create');
     Route::get('manage-asset/access-point/import', [AccessPointController::class, 'importForm'])->name('manage-access-point.import.form');
-    Route::post('manage-asset/access-point/import', [AccessPointController::class, 'importStore'])->name('manage-asset.access-point.import'); // Disesuaikan agar namanya match dengan `route('manage-asset.access-point.import')`
+    Route::post('manage-asset/access-point/import', [AccessPointController::class, 'importStore'])->name('manage-asset.access-point.import'); 
     Route::post('manage-asset/access-point', [AccessPointController::class, 'store'])->name('manage-access-point.store');
     Route::get('manage-asset/access-point/{accessPoint}/edit', [AccessPointController::class, 'edit'])->name('manage-access-point.edit');
     Route::patch('manage-asset/access-point/{accessPoint}', [AccessPointController::class, 'update'])->name('manage-access-point.update');
@@ -122,7 +112,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/manage-asset/firewall', [FirewallController::class, 'index'])->name('manage-firewall');
     Route::get('/manage-asset/firewall/create', [FirewallController::class, 'create'])->name('manage-asset.firewall.create');
     Route::get('/manage-asset/firewall/import', [FirewallController::class, 'importForm'])->name('manage-asset.firewall.import');
-    Route::post('/manage-asset/firewall/import', [FirewallController::class, 'importStore'])->name('manage-asset.firewall.import.process'); // Diubah namanya agar sesuai dengan form action
+    Route::post('/manage-asset/firewall/import', [FirewallController::class, 'importStore'])->name('manage-asset.firewall.import.process'); 
     Route::post('/manage-asset/firewall', [FirewallController::class, 'store'])->name('manage-asset.firewall.store');
     Route::get('/manage-asset/firewall/{id}/edit', [FirewallController::class, 'edit'])->name('manage-asset.firewall.edit');
     Route::patch('/manage-asset/firewall/{id}', [FirewallController::class, 'update'])->name('manage-asset.firewall.update');
@@ -149,11 +139,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ServerBaremetalController::class, 'index']);
         Route::get('/create', [ServerBaremetalController::class, 'create'])->name('.create');
         Route::post('/store', [ServerBaremetalController::class, 'store'])->name('.store');
-        
-        // Import Routes
         Route::get('/import', [ServerBaremetalController::class, 'importForm'])->name('.import.form');
         Route::post('/import', [ServerBaremetalController::class, 'importStore'])->name('.import.store');
-
         Route::get('/{server}/edit', [ServerBaremetalController::class, 'edit'])->name('.edit');
         Route::patch('/{server}', [ServerBaremetalController::class, 'update'])->name('.update');
         Route::delete('/{server}', [ServerBaremetalController::class, 'destroy'])->name('.destroy');
@@ -166,22 +153,84 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [ServerFisikController::class, 'index']);
         Route::get('/create', [ServerFisikController::class, 'create'])->name('.create');
         Route::post('/store', [ServerFisikController::class, 'store'])->name('.store');
-        
-        // Import Routes
         Route::get('/import', [ServerFisikController::class, 'importForm'])->name('.import.form');
         Route::post('/import', [ServerFisikController::class, 'importStore'])->name('.import.store');
-
         Route::get('/{serverFisik}/edit', [ServerFisikController::class, 'edit'])->name('.edit');
         Route::patch('/{serverFisik}', [ServerFisikController::class, 'update'])->name('.update');
         Route::delete('/{serverFisik}', [ServerFisikController::class, 'destroy'])->name('.destroy');
     });
 
     // ==========================================
-    // MANAGE ASSET BY ID & CATEGORY (Ditaruh di bawah agar aman)
+    // MANAGE SERVER STORAGE
     // ==========================================
+    Route::prefix('manage-asset/server-storage')->name('manage-server-storage')->group(function () {
+        Route::get('/', [ServerStorageController::class, 'index']);
+        Route::get('/create', [ServerStorageController::class, 'create'])->name('.create');
+        Route::post('/store', [ServerStorageController::class, 'store'])->name('.store');
+        Route::get('/import', [ServerStorageController::class, 'importForm'])->name('.import.form');
+        Route::post('/import', [ServerStorageController::class, 'importStore'])->name('.import.store');
+        Route::get('/{serverStorage}/edit', [ServerStorageController::class, 'edit'])->name('.edit');
+        Route::patch('/{serverStorage}', [ServerStorageController::class, 'update'])->name('.update');
+        Route::delete('/{serverStorage}', [ServerStorageController::class, 'destroy'])->name('.destroy');
+    });
+
+    // ==========================================
+    // MANAGE SERVER UPS
+    // ==========================================
+    Route::prefix('manage-asset/ups')->name('manage-ups')->group(function () {
+        Route::get('/', [UpsController::class, 'index']);
+        Route::get('/create', [UpsController::class, 'create'])->name('.create');
+        Route::post('/store', [UpsController::class, 'store'])->name('.store');
+        Route::get('/import', [UpsController::class, 'importForm'])->name('.import.form');
+        Route::post('/import', [UpsController::class, 'importStore'])->name('.import.store');
+        Route::get('/{ups}/edit', [UpsController::class, 'edit'])->name('.edit');
+        Route::patch('/{ups}', [UpsController::class, 'update'])->name('.update');
+        Route::delete('/{ups}', [UpsController::class, 'destroy'])->name('.destroy');
+    });
+
+    // ==========================================
+    // MANAGE SERVER WIRELESS LAN
+    // ==========================================
+    Route::prefix('manage-asset/wireless-lan')->name('manage-wireless-lan')->group(function () {
+        Route::get('/', [WirelessLanController::class, 'index']);
+        Route::get('/create', [WirelessLanController::class, 'create'])->name('.create');
+        Route::post('/store', [WirelessLanController::class, 'store'])->name('.store');
+        Route::get('/import', [WirelessLanController::class, 'importForm'])->name('.import.form');
+        Route::post('/import', [WirelessLanController::class, 'importStore'])->name('.import.store');
+        Route::get('/{wirelessLan}/edit', [WirelessLanController::class, 'edit'])->name('.edit');
+        Route::patch('/{wirelessLan}', [WirelessLanController::class, 'update'])->name('.update');
+        Route::delete('/{wirelessLan}', [WirelessLanController::class, 'destroy'])->name('.destroy');
+    });
+
+    // ==========================================
+    // MANAGE TOWER (URL: /manage-asset/tower)
+    // ==========================================
+    Route::prefix('manage-asset/tower')->name('manage-asset.tower')->group(function () {
+        Route::get('/', [AssetController::class, 'indexTower'])->name('.index');
+        Route::get('/import', [AssetController::class, 'importForm'])->name('.import.form');
+        Route::post('/import', [AssetController::class, 'import'])->name('.import.store');
+        Route::get('/{tower}/edit', [AssetController::class, 'editTower'])->name('.edit');
+        Route::patch('/{tower}', [AssetController::class, 'updateTower'])->name('.update');
+        Route::delete('/{tower}', [AssetController::class, 'destroyTower'])->name('.destroy');
+    });
+
+    // Rute Detail Jalur SUTT (Show) & Hapus Induk Jalur SUTT
+    Route::get('manage-asset/tower/{id}', [AssetController::class, 'show'])->where('id', '[0-9]+')->name('manage-asset.show');
+    Route::delete('manage-asset/tower/file/{asset}', [AssetController::class, 'destroy'])->where('asset', '[0-9]+')->name('manage-asset.destroy');
+
+    // ==========================================
+    // MANAGE ASSET & HISTORY (CORE)
+    // ==========================================
+    Route::get('/manage-asset/history', [AssetController::class, 'history'])->name('manage-asset.history');
+    Route::get('/manage-asset/history/export', [AssetController::class, 'exportCsv'])->name('manage-asset.history.export');
+
+    Route::get('manage-asset/create', [AssetController::class, 'create'])->name('manage-asset.create');
+    Route::post('manage-asset', [AssetController::class, 'store'])->name('manage-asset.store');
+    
+    // Rute Utama /manage-asset dialihkan langsung menampilkan indexTower (Menu Tower)
+    Route::get('manage-asset', [AssetController::class, 'indexTower'])->name('manage-asset'); 
+    
     Route::get('manage-asset/{id}/edit', [AssetController::class, 'edit'])->where('id', '[0-9]+')->name('manage-asset.edit');
     Route::patch('manage-asset/{id}', [AssetController::class, 'update'])->where('id', '[0-9]+')->name('manage-asset.update');
-    Route::delete('manage-asset/{id}', [AssetController::class, 'destroy'])->where('id', '[0-9]+')->name('manage-asset.destroy');
-    Route::get('manage-asset/{id}', [AssetController::class, 'show'])->where('id', '[0-9]+')->name('manage-asset.show');
     Route::get('manage-asset/{category:slug}', [AssetController::class, 'indexByCategory'])->name('manage-asset.category');
 });

@@ -18,6 +18,9 @@ class AssetCategorySeeder extends Seeder
             ['name' => 'Modem', 'slug' => 'modem', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Server Baremetal', 'slug' => 'server-baremetal', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'Server Fisik', 'slug' => 'server-fisik', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Server Storage', 'slug' => 'server-storage', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'UPS', 'slug' => 'ups', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'Wireless LAN', 'slug' => 'wireless-lan', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 }

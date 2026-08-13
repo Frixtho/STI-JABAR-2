@@ -50,29 +50,122 @@ class AddUserController extends Controller
 
     public function store(Request $request)
     {
-        // Validasi input sesuai dengan form UI Anda
+        $validated = $request->validate([
+            'name'       => 'required|string|max:255',
+            'email'      => 'required|email|unique:users,email',
+            'nip'        => 'required|string',
+            'department' => 'required|string',
+            'role'       => 'required|string',
+            'status'     => 'required|string',
+            'password'   => 'required|string|min:8', // Wajib diisi saat create
+        ]);
+
+        // Lakukan Hash pada password
+        $validated['password'] = Hash::make($request->password);
+
+        User::create($validated);
+
+        return redirect()->route('manage-user')->with('success', 'Pengguna berhasil ditambahkan.');
+    }
+
+    public function update(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'name'       => 'required|string|max:255',
+            'email'      => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'nip'        => 'required|string',
+            'department' => 'required|string',
+            'role'       => 'required|string',
+            'status'     => 'required|string',
+            'password'   => 'nullable|string|min:8', // Opsional saat update
+        ]);
+
+        // Cek apakah admin mengisi password baru
+        if ($request->filled('password')) {
+            $validated['password'] = Hash::make($request->password);
+        } else {
+            // Jika tidak diisi, jangan update kolom password
+            unset($validated['password']);
+        }
+
+        $user->update($validated);
+
+        return redirect()->route('manage-user')->with('success', 'Data pengguna berhasil diperbarui.');
+    }
+
+    public function importForm()
+    {
+        return view('userImport');
+    }
+
+    public function importStore(Request $request)
+    {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'nip' => 'required|string|unique:users,nip', // Asumsi ada kolom nip di database
-            'department' => 'required|string',  
-            'role' => 'required|string',
-            'status' => 'required|in:Aktif,Non-Aktif',
+            'file' => ['required', 'file', 'mimes:csv,txt'],
         ]);
 
-        // Simpan ke Database
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'nip' => $request->nip,
-            'department' => $request->department,
-            'role' => $request->role,
-            'status' => $request->status,
-            // Password dibuat random / temporer karena user akan verifikasi via email secara mandiri
-            'password' => Hash::make(Str::random(16)), 
-        ]);
+        $file = $request->file('file');
+        $skippedReasons = [];
+        $successCount = 0;
 
-        // Redireksi kembali ke halaman tabel dengan pesan sukses
-        return redirect()->route('manage-user')->with('success', 'Pengguna baru berhasil ditambahkan.');
+        try {
+            $handle = fopen($file->getRealPath(), 'r');
+            // Deteksi separator (koma atau titik koma)
+            $sampleLine = fgets($handle);
+            rewind($handle);
+            $delimiter = (substr_count($sampleLine, ';') > substr_count($sampleLine, ',')) ? ';' : ',';
+
+            $rowIndex = 0;
+            while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                $rowIndex++;
+
+                // Skip header (baris 1)
+                if ($rowIndex == 1) continue;
+                
+                // Pastikan minimal ada kolom "Nama User" (index 1)
+                if (count($row) < 2 || empty(trim($row[1]))) {
+                    continue; 
+                }
+
+                $namaUser = trim($row[1]);
+                $keterangan = trim($row[2] ?? '');
+
+                // Generate Email Dummy (Karena di excel tidak ada email)
+                // Contoh: heru.susanto_2@pln.co.id
+                $emailSlug = Str::slug($namaUser, '.');
+                $email = $emailSlug . '_' . $rowIndex . '@pln.co.id';
+
+                // Simpan atau abaikan jika duplikat
+                $userExists = User::where('name', $namaUser)->first();
+                if ($userExists) {
+                    $skippedReasons[] = "Baris ke-{$rowIndex}: User dengan nama '{$namaUser}' sudah ada.";
+                    continue;
+                }
+
+                User::create([
+                    'name'       => $namaUser,
+                    'email'      => $email,
+                    'password'   => Hash::make('pln12345'), // Default password
+                    'role'       => 'Staff',                // Default role
+                    'department' => $keterangan,            // Keterangan PUSHARLIS dimasukkan sbg departemen
+                    // 'nip'     => '...',                 // Jika di database NIP nullable
+                    // 'status'  => 'Aktif',               // Sesuaikan dengan struktur DB
+                ]);
+
+                $successCount++;
+            }
+            fclose($handle);
+
+        } catch (\Exception $e) {
+            if (isset($handle) && is_resource($handle)) fclose($handle);
+            return back()->with('error', 'Gagal memproses file: ' . $e->getMessage());
+        }
+
+        $message = "Berhasil mengimpor {$successCount} daftar pengguna.";
+        if (count($skippedReasons) > 0) {
+            session()->flash('import_skipped_reasons', $skippedReasons);
+        }
+
+        return redirect()->route('manage-user')->with('success', $message);
     }
 }

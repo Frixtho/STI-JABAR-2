@@ -8,22 +8,31 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('sutt_towers', function (Blueprint $table) {
+        // Tabel Utama (Daftar File)
+        Schema::create('tower_files', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('sutt_line_id')->constrained()->cascadeOnDelete();
-            $table->unsignedInteger('tower_number'); // dari suffix "T00xx" di Functloc, dipakai buat urutan sepanjang jalur
-            $table->string('functloc')->nullable();
-            $table->string('name')->nullable();
-            $table->decimal('latitude', 12, 7);
-            $table->decimal('longitude', 12, 7);
+            $table->string('filename');
+            $table->foreignId('uploaded_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamps();
+        });
 
-            $table->unique(['sutt_line_id', 'tower_number']);
+        // Tabel Detail (Isi Tower)
+        Schema::create('towers', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('tower_file_id')->constrained('tower_files')->cascadeOnDelete(); // Terhubung ke file
+            $table->string('tower_number')->nullable();
+            $table->string('functloc')->nullable();
+            $table->string('nama_tower')->nullable();
+            $table->string('latitude')->nullable();
+            $table->string('longitude')->nullable();
+            $table->decimal('jarak_antar_tower', 12, 2)->nullable(); // Dalam meter
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('sutt_towers');
+        Schema::dropIfExists('towers');
+        Schema::dropIfExists('tower_files');
     }
 };

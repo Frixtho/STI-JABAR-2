@@ -1,8 +1,7 @@
-@extends('layouts.app', ['title' => 'Import Asset SUTT — PLN Financial'])
+@extends('layouts.app', ['title' => 'Import File Tower SUTT — PLN Financial'])
 
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
-
 
     {{-- ===================== MAIN CONTENT ===================== --}}
     <div class="flex-1 min-w-0">
@@ -46,16 +45,16 @@
 
             {{-- Breadcrumb --}}
             <nav class="flex items-center gap-1.5 text-sm">
-                <a href="{{ route('dashboard') }}" class="text-gray-400 hover:text-[#004A54]">
-                    Dashboard
+                <a href="{{ route('manage-asset') }}" class="text-gray-400 hover:text-[#004A54] transition-colors">
+                    Manage Asset: Tower
                 </a>
                 <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                 </svg>
-                <span class="font-semibold text-gray-700 dark:text-gray-200">Import Asset SUTT</span>
+                <span class="font-semibold text-gray-700 dark:text-gray-200">Import File Tower</span>
             </nav>
 
-            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Import Jalur SUTT dari CSV</h1>
+            <h1 class="text-2xl font-bold text-pln-800 dark:text-white">Import File Koordinat Tower SUTT</h1>
 
             @if (session('success'))
                 <div class="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-4 py-3 text-sm text-green-700 dark:text-green-400">
@@ -71,7 +70,7 @@
 
             @if(session('import_skipped_reasons'))
                 <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg text-xs max-h-48 overflow-y-auto">
-                    <p class="font-bold mb-1">Contoh Alasan Baris Dilewati:</p>
+                    <p class="font-bold mb-1">Catatan Import Gagal / Dilewati:</p>
                     <ul class="list-disc list-inside space-y-1">
                         @foreach(array_unique(session('import_skipped_reasons')) as $reason)
                             <li>{{ $reason }}</li>
@@ -96,21 +95,22 @@
                         </svg>
                     </div>
                     <div>
-                        <h2 class="text-base font-bold text-pln-800 dark:text-white">Upload File CSV SUTT</h2>
-                        <p class="text-sm text-gray-400 dark:text-gray-500">Unggah satu atau beberapa file data Jalur SUTT secara massal sekaligus.</p>
+                        <h2 class="text-base font-bold text-pln-800 dark:text-white">Upload File CSV SUTT / SUTET</h2>
+                        <p class="text-sm text-gray-400 dark:text-gray-500">Setiap file CSV yang Anda unggah akan didaftarkan sebagai 1 Jalur baru (nama jalur otomatis mengikuti nama file CSV). Seluruh isi di dalam file tersebut akan tercatat sebagai titik-titik tower.</p>
                     </div>
                 </div>
 
                 <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-5">
 
-                    <form action="{{ route('manage-asset.import') }}" method="POST" enctype="multipart/form-data">
+                    {{-- Pastikan action diarahkan ke rute yang menangani form ini --}}
+                   <form action="{{ route('manage-asset.tower.import.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
-                            <!-- Upload Multiple Files CSV -->
+                        <!-- Upload Multiple Files CSV -->
                         <div class="mb-6">
-                            <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">File CSV (Bisa pilih lebih dari satu)</label>
+                            <label class="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-200">Pilih File CSV (Mendukung upload banyak file sekaligus)</label>
                             <input type="file" name="files[]" id="fileInput" accept=".csv,.txt" class="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 file:mr-4 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-[#004A54] file:text-white hover:file:bg-[#003840] cursor-pointer" multiple required>
-                            <p class="text-xs text-gray-400 mt-1">Tekan dan tahan tombol Ctrl (Windows) atau Cmd (Mac) di keyboard untuk memilih banyak file sekaligus.</p>
+                            <p class="text-xs text-gray-400 mt-1">Tekan dan tahan tombol <strong>Ctrl</strong> (Windows) atau <strong>Cmd</strong> (Mac) di keyboard untuk memilih banyak file sekaligus.</p>
                             
                             {{-- Container untuk menampilkan daftar file yang terpilih secara dinamis --}}
                             <div id="fileListContainer" class="hidden mt-3 p-3 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-600 dark:text-gray-300">
@@ -121,12 +121,14 @@
 
                         <!-- Tombol Aksi -->
                         <div class="flex items-center justify-end gap-3 border-t border-gray-200 dark:border-gray-700 pt-4">
-                            <a href="{{ route('manage-asset') }}" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Batal</a>
+                            {{-- Batal kembali ke manage-asset --}}
+                            <a href="{{ route('manage-asset') }}"class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">Batal</a>
                             <button type="submit" class="bg-[#004A54] hover:bg-[#003840] text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors">
-                                Proses Import Semua
+                                Upload & Proses Data Tower
                             </button>
                         </div>
                     </form>
+
                 </div>
             </div>
         </main>

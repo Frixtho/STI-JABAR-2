@@ -22,6 +22,7 @@ return new class extends Migration
             $table->foreignId('tower_file_id')->constrained('tower_files')->cascadeOnDelete(); // Terhubung ke file
             $table->string('tower_number')->nullable();
             $table->string('functloc')->nullable();
+            $table->string('name')->nullable();
             $table->string('nama_tower')->nullable();
             $table->string('latitude')->nullable();
             $table->string('longitude')->nullable();

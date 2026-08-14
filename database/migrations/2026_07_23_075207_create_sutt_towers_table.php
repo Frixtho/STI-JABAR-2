@@ -8,18 +8,13 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Tabel Utama (Daftar File)
-        Schema::create('tower_files', function (Blueprint $table) {
-            $table->id();
-            $table->string('filename');
-            $table->foreignId('uploaded_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamps();
-        });
-
         // Tabel Detail (Isi Tower)
         Schema::create('sutt_towers', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('tower_file_id')->constrained('tower_files')->cascadeOnDelete(); // Terhubung ke file
+            
+            // Relasi yang BENAR sesuai dengan permintaan Controller (sutt_line_id)
+            $table->foreignId('sutt_line_id')->constrained('sutt_lines')->cascadeOnDelete(); 
+            
             $table->string('tower_number')->nullable();
             $table->string('functloc')->nullable();
             $table->string('name')->nullable();
@@ -34,6 +29,5 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('sutt_towers');
-        Schema::dropIfExists('tower_files');
     }
 };

@@ -12,8 +12,8 @@
                 <path d="M13 2 3 14h7l-1 8 11-14h-7l1-6Z" />
             </svg>
             <div class="leading-tight">
-                <p class="font-bold text-sm text-white tracking-tight">PLN Financial</p>
-                <p class="text-[10px] tracking-[0.2em] text-pln-100/80">UTILITY MANAGEMENT</p>
+                <p class="font-bold text-sm text-white tracking-tight">PLN Asset Management</p>
+                <p class="text-[10px] tracking-[0.2em] text-pln-100/80">ASSET MANAGEMENT</p>
             </div>
         </div>
 
@@ -24,7 +24,7 @@
             </h1>
             <div class="w-10 h-1 bg-accent-400 rounded-full mt-4 mb-4"></div>
             <p class="text-sm text-pln-100/80 leading-relaxed">
-                Advanced utility asset management and financial auditing
+                Advanced utility asset management
                 for modern infrastructure ecosystems. Reliability through
                 data-driven governance.
             </p>
@@ -54,8 +54,7 @@
 
             <h2 class="text-xl font-bold text-pln-800">Secure Access</h2>
             <p class="mt-1.5 text-sm text-gray-500">
-                Enter your credentials to manage utility assets and
-                financial statements.
+                Enter your credentials to manage utility assets.
             </p>
 
             @if ($errors->any())

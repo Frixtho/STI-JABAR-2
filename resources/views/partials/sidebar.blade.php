@@ -1,8 +1,8 @@
 {{-- ===================== SIDEBAR ===================== --}}
 <aside class="hidden lg:flex lg:flex-col lg:w-60 bg-pln-800 text-white shrink-0 overflow-y-auto">
     <div class="px-6 py-6 shrink-0">
-        <p class="font-bold text-lg leading-tight">PLN Financial</p>
-        <p class="text-[10px] tracking-[0.2em] text-accent-400">UTILITY MANAGEMENT</p>
+        <p class="font-bold text-lg leading-tight">PLN Asset Management</p>
+        <p class="text-[10px] tracking-[0.2em] text-accent-400">ASSET MANAGEMENT</p>
     </div>
 
     <nav class="flex-1 px-4 space-y-1 mt-2 mb-6">

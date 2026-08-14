@@ -35,7 +35,42 @@ Route::middleware('auth')->group(function () {
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])->name('logout');
 
     Route::get('dashboard', function () {
-        return view('dashboard');
+        // 1. TOP CARDS (Data Real dengan pengaman jika tabel belum ada)
+        $totalTowers = \Illuminate\Support\Facades\Schema::hasTable('assets') ? \Illuminate\Support\Facades\DB::table('assets')->where('category', 'sutt')->sum('jumlah_tower') : 0;        $totalAPs = \Illuminate\Support\Facades\Schema::hasTable('access_points') ? \Illuminate\Support\Facades\DB::table('access_points')->count() : 0;
+        $totalRouters = \Illuminate\Support\Facades\Schema::hasTable('routers') ? \Illuminate\Support\Facades\DB::table('routers')->count() : 0;
+        
+        $baremetal = \Illuminate\Support\Facades\Schema::hasTable('server_baremetals') ? \Illuminate\Support\Facades\DB::table('server_baremetals')->count() : 0;
+        $fisik = \Illuminate\Support\Facades\Schema::hasTable('server_fisiks') ? \Illuminate\Support\Facades\DB::table('server_fisiks')->count() : 0;
+        $totalServers = $baremetal + $fisik;
+
+        // 2. MIDDLE LEFT: Jalur SUTT Terbaru (Pengganti Maintenance Schedule)
+        $recentLines = \Illuminate\Support\Facades\Schema::hasTable('assets') ? \Illuminate\Support\Facades\DB::table('assets')
+            ->where('category', 'sutt')
+            ->orderBy('created_at', 'desc')
+            ->limit(3)
+            ->get() : collect([]);
+
+        // 3. MIDDLE RIGHT: Distribusi Aset (Pengganti Connectivity)
+        $totalIT = $totalAPs + $totalRouters + $totalServers;
+        $totalIT = $totalIT > 0 ? $totalIT : 1; // Mencegah error pembagian nol
+        $distribution = (object)[
+            'ap' => $totalAPs,
+            'ap_pct' => round(($totalAPs / $totalIT) * 100),
+            'router' => $totalRouters,
+            'router_pct' => round(($totalRouters / $totalIT) * 100),
+            'server' => $totalServers,
+            'server_pct' => round(($totalServers / $totalIT) * 100),
+        ];
+
+        // 4. BOTTOM TABLE: Riwayat Perubahan (Pengganti Recent Alerts)
+        $recentHistories = \Illuminate\Support\Facades\Schema::hasTable('asset_histories') ? \Illuminate\Support\Facades\DB::table('asset_histories')
+            ->leftJoin('users', 'asset_histories.user_id', '=', 'users.id')
+            ->select('asset_histories.*', 'users.name as user_name')
+            ->orderBy('asset_histories.created_at', 'desc')
+            ->limit(5)
+            ->get() : collect([]);
+
+        return view('dashboard', compact('totalTowers', 'totalAPs', 'totalRouters', 'totalServers', 'recentLines', 'distribution', 'recentHistories'));
     })->name('dashboard');
 
     Route::get('settings', [SettingsController::class, 'edit'])->name('settings');

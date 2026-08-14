@@ -17,7 +17,7 @@ return new class extends Migration
         });
 
         // Tabel Detail (Isi Tower)
-        Schema::create('towers', function (Blueprint $table) {
+        Schema::create('sutt_towers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tower_file_id')->constrained('tower_files')->cascadeOnDelete(); // Terhubung ke file
             $table->string('tower_number')->nullable();
@@ -32,7 +32,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('towers');
+        Schema::dropIfExists('sutt_towers');
         Schema::dropIfExists('tower_files');
     }
 };

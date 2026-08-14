@@ -1,204 +1,383 @@
-@extends('layouts.app', ['title' => (($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna Baru') . ' — PLN Financial'])
+@extends('layouts.app', [
+    'title' => (($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna Baru') . ' — PLN Financial'
+])
 
 @section('content')
-<div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
 
-    {{-- ===================== MAIN CONTENT ===================== --}}
-    <div class="flex-1 min-w-0 flex flex-col justify-between">
-        <div>
-            {{-- Top bar --}}
-            <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between gap-4">
-                <div class="relative w-full max-w-sm">
-                    <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
-                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <circle cx="11" cy="11" r="7" stroke-linecap="round" stroke-linejoin="round" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="m20 20-3.5-3.5" />
-                        </svg>
-                    </span>
-                    <input type="text" placeholder="Cari di pengaturan..."
-                        class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-10 pr-3 text-sm text-gray-700 dark:text-gray-200 focus:border-[#064e57] focus:bg-white dark:focus:bg-gray-700 focus:outline-none">
-                </div>
+<main class="p-6 lg:p-10 space-y-5 w-full">
 
-                <div class="flex items-center gap-5 shrink-0">
-                    <button type="button" class="relative text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.85 23.85 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                        </svg>
-                        <span class="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500"></span>
-                    </button>
-                    <div class="flex items-center gap-2">
-                        <div class="text-right leading-tight">
-                            <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">{{ auth()->user()->name ?? 'Admin PLN' }}</p>
-                            <p class="text-[10px] font-semibold uppercase tracking-wide {{ strcasecmp(auth()->user()->role ?? '', 'Admin') === 0 ? 'text-accent-500' : 'text-gray-400 dark:text-gray-500' }}">
-                                {{ auth()->user()->role ?? 'Admin' }}
-                            </p>
-                        </div>
-                        <div class="w-8 h-8 rounded-full bg-pln-800 text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
-                            {{ implode('', array_map(fn($w) => $w[0] ?? '', array_slice(explode(' ', auth()->user()->name ?? 'Admin PLN'), 0, 2))) }}
-                        </div>
-                    </div>
-                </div>
-            </header>
+    {{-- Breadcrumb --}}
+    <nav class="flex items-center gap-1.5 text-sm">
+        <a href="{{ route('manage-user') }}"
+           class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 transition-colors">
+            Manage User
+        </a>
 
-            {{-- Content Area --}}
-            <main class="p-6 space-y-4">
-                {{-- Breadcrumbs --}}
-                <div class="text-xs text-gray-500 dark:text-gray-400 font-medium flex items-center gap-1.5">
-                    <a href="{{ route('manage-user') }}" class="hover:underline text-[#064e57] dark:text-accent-400">Manage User</a>
-                    <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                    <span class="text-gray-400">{{ ($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna' }}</span>
-                </div>
+        <svg class="w-3.5 h-3.5 text-gray-300 dark:text-gray-600"
+             fill="none"
+             viewBox="0 0 24 24"
+             stroke="currentColor"
+             stroke-width="2">
+            <path stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+        </svg>
 
-                <h1 class="text-2xl font-bold text-[#063333] dark:text-white">{{ ($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna Baru' }}</h1>
+        <span class="font-semibold text-gray-700 dark:text-gray-200">
+            {{ ($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna' }}
+        </span>
+    </nav>
 
-                @if ($errors->any())
-                    <div class="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-700 dark:text-red-400">
-                        <ul class="list-disc list-inside space-y-1">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
 
-                {{-- Form Card --}}
-                <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
-                    {{-- Header Card --}}
-                    <div class="p-5 border-b border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/40 flex items-center gap-4">
-                        <div class="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-300">
-                            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <h2 class="text-base font-bold text-gray-800 dark:text-gray-100">Informasi Akun</h2>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Lengkapi detail profil, akses, dan kata sandi pengguna di bawah ini.</p>
-                        </div>
-                    </div>
+    {{-- Title --}}
+    <div>
+        <p class="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            Account Management
+        </p>
 
-                    {{-- Body Form --}}
-                    <form action="{{ ($user ?? false) ? route('manage-user.update', $user->id) : route('manage-user.store') }}" method="POST" class="p-6 space-y-5">
-                        @csrf
-                        @if ($user ?? false) @method('PATCH') @endif
+        <h1 class="text-2xl font-bold text-pln-800 dark:text-white">
+            {{ ($user ?? false) ? 'Edit Pengguna' : 'Tambah Pengguna Baru' }}
+        </h1>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            {{-- Nama Lengkap --}}
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Nama Lengkap *</label>
-                                <div class="relative">
-                                    <input type="text" name="name" value="{{ old('name', $user->name ?? '') }}" placeholder="Masukkan nama lengkap" required
-                                        class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
-                                </div>
-                            </div>
+        <p class="mt-1 text-sm text-gray-400 dark:text-gray-500">
+            {{ ($user ?? false)
+                ? 'Perbarui informasi profil, akses, dan kata sandi pengguna.'
+                : 'Tambahkan pengguna baru dan tentukan hak akses (role) ke dalam sistem.'
+            }}
+        </p>
+    </div>
 
-                            {{-- Alamat Email --}}
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Alamat Email *</label>
-                                <input type="email" name="email" value="{{ old('email', $user->email ?? '') }}" placeholder="example@pln.co.id" required
-                                    class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
-                            </div>
 
-                            {{-- Kata Sandi (Password) --}}
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Kata Sandi (Password) {{ ($user ?? false) ? '' : '*' }}</label>
-                                <input type="password" name="password" placeholder="{{ ($user ?? false) ? 'Kosongkan jika tidak ingin diubah' : 'Masukkan kata sandi' }}" {{ ($user ?? false) ? '' : 'required' }} minlength="8"
-                                    class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
-                                @if($user ?? false)
-                                    <p class="text-[10px] text-gray-400 mt-1">Biarkan kosong jika Anda tidak ingin mengganti password pengguna ini.</p>
-                                @endif
-                            </div>
+    {{-- Error --}}
+    @if ($errors->any())
+        <div class="rounded-md border border-red-200 dark:border-red-800
+                    bg-red-50 dark:bg-red-900/30 px-4 py-3
+                    text-sm text-red-700 dark:text-red-400">
 
-                            {{-- NIP --}}
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Nomor Induk Pegawai (NIP)</label>
-                                <input type="text" name="nip" value="{{ old('nip', $user->nip ?? '') }}" placeholder="Contoh: 19920815XXXX (Isi '-' jika belum ada)" required
-                                    class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#064e57] focus:outline-none focus:ring-1 focus:ring-[#064e57]">
-                            </div>
+            <ul class="list-disc list-inside space-y-1">
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
 
-                            {{-- Departemen (Sesuai dengan Keterangan di Excel) --}}
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Departemen / Unit / Keterangan *</label>
-                                <select name="department" required class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-[#064e57] focus:ring-1 focus:ring-[#064e57]">
-                                    <option value="" disabled {{ old('department', $user->department ?? '') ? '' : 'selected' }}>Pilih Departemen / Unit</option>
-                                    @php
-                                        // Daftar Keterangan berdasarkan file Daftar User.xlsx
-                                        $departemenList = [
-                                            'PUSHARLIS', 'UID JAWA BARAT', 'UIP JBT', 'UIT JBT', 'UP2B JAWA BARAT',
-                                            'UP2D JAWA BARAT', 'UP3 BANDUNG', 'UP3 CIANJUR', 'UP3 CIMAHI', 'UP3 CIREBON',
-                                            'UP3 GARUT', 'UP3 INDRAMAYU', 'UP3 KARAWANG', 'UP3 MAJALAYA',
-                                            'UP3 PURWAKARTA', 'UP3 SUKABUMI', 'UP3 SUMEDANG', 'UP3 TASIKMALAYA',
-                                            'UPT CIREBON', 'UPT KARAWANG', 'USAT CIRATA', 'STI JABAR'
-                                        ];
-                                    @endphp
-                                    @foreach($departemenList as $dept)
-                                        <option value="{{ $dept }}" @selected(old('department', $user->department ?? '') == $dept)>{{ $dept }}</option>
-                                    @endforeach
-                                    {{-- Opsi tambahan untuk mengantisipasi data lama --}}
-                                    <option value="Lainnya" @selected(old('department', $user->department ?? '') == 'Lainnya')>Lainnya...</option>
-                                </select>
-                            </div>
+        </div>
+    @endif
 
-                            {{-- Peran/Role --}}
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide">Peran/Role *</label>
-                                <select name="role" required class="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:outline-none focus:border-[#064e57] focus:ring-1 focus:ring-[#064e57]">
-                                    <option value="" disabled {{ old('role', $user->role ?? '') ? '' : 'selected' }}>Pilih Peran</option>
-                                    <option value="Admin" @selected(old('role', $user->role ?? '') === 'Admin')>Admin</option>
-                                    <option value="Manager" @selected(old('role', $user->role ?? '') === 'Manager')>Manager</option>
-                                    <option value="Staff" @selected(old('role', $user->role ?? '') === 'Staff')>Staff</option>
-                                </select>
-                            </div>
 
-                            {{-- Status Akun --}}
-                            <div class="space-y-1.5">
-                                <label class="text-xs font-bold text-gray-700 dark:text-gray-300 tracking-wide block">Status Akun *</label>
-                                <div class="flex items-center gap-4 pt-2">
-                                    <input type="radio" name="status" value="Aktif" id="aktif" {{ old('status', $user->status ?? 'Aktif') == 'Aktif' ? 'checked' : '' }}>
-                                    <label for="aktif" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">Aktif</label>
+    {{-- FORM --}}
+    <form
+        method="POST"
+        action="{{ ($user ?? false)
+            ? route('manage-user.update', $user->id)
+            : route('manage-user.store')
+        }}"
+        class="bg-white dark:bg-gray-800 rounded-xl
+               border border-gray-200 dark:border-gray-700
+               shadow-sm"
+    >
 
-                                    <input type="radio" name="status" value="Non-Aktif" id="non-aktif" {{ old('status', $user->status ?? '') == 'Non-Aktif' ? 'checked' : '' }}>
-                                    <label for="non-aktif" class="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">Non-Aktif</label>
-                                </div>
-                            </div>
-                        </div>
+        @csrf
 
-                        {{-- Info Callout --}}
-                        <div class="bg-cyan-50/50 dark:bg-cyan-900/20 border-l-4 border-cyan-500 p-4 rounded-r-md flex gap-3 mt-2">
-                            <svg class="w-5 h-5 text-cyan-600 dark:text-cyan-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <p class="text-xs text-cyan-800 dark:text-cyan-300 leading-relaxed">
-                                {{ ($user ?? false) ? 'Perubahan pada profil pengguna akan langsung berlaku. Jika Anda mengganti email atau password, pastikan untuk menginformasikan kepada pengguna bersangkutan.' : 'Akun baru akan dibuat dengan kata sandi yang Anda tentukan di atas. Harap berikan email dan kata sandi ini kepada pengguna agar dapat login.' }}
-                            </p>
-                        </div>
+        @if ($user ?? false)
+            @method('PATCH')
+        @endif
 
-                        {{-- Action Buttons --}}
-                        <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
-                            <a href="{{ route('manage-user') }}" class="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-5 py-2 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                                Batal
-                            </a>
-                            <button type="submit" class="bg-[#004A54] text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-[#00363d] transition-colors shadow-sm flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                                </svg>
-                                {{ ($user ?? false) ? 'Simpan Perubahan' : 'Simpan Pengguna' }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </main>
+
+        {{-- Card Header --}}
+        <div class="flex items-start gap-4 p-8 pb-6">
+
+            <div class="w-11 h-11 rounded-lg bg-gray-100 dark:bg-gray-700
+                        flex items-center justify-center shrink-0">
+
+                <svg class="w-5 h-5 text-gray-600 dark:text-gray-300"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor"
+                     stroke-width="1.8">
+
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+
+                </svg>
+
+            </div>
+
+            <div>
+                <h2 class="text-base font-bold text-pln-800 dark:text-white">
+                    Informasi Akun
+                </h2>
+
+                <p class="text-sm text-gray-400 dark:text-gray-500">
+                    Lengkapi detail profil, akses, dan identitas pengguna di bawah ini.
+                </p>
+            </div>
+
         </div>
 
-        {{-- Footer --}}
-        <footer class="px-6 py-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
-            <p>&copy; 2024 PT PLN (PERSERO) - FINANCIAL INTEGRITY MODULE</p>
-            <div class="flex gap-4">
-                <a href="#" class="hover:underline">Privacy Policy</a>
-                <a href="#" class="hover:underline">Support Center</a>
+
+        {{-- FIELDS --}}
+        <div class="border-t border-gray-100 dark:border-gray-700 p-8 space-y-6">
+
+
+            {{-- BAGIAN 1: PROFIL & KREDENSIAL --}}
+            <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-4">
+                    Profil & Kredensial
+                </h3>
+
+                <div class="space-y-6">
+
+                    {{-- ROW 1: Nama, Email, Password --}}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                        {{-- NAMA LENGKAP --}}
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Nama Lengkap <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                name="name"
+                                value="{{ old('name', $user->name ?? '') }}"
+                                required
+                                placeholder="Contoh: Budi Santoso"
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600
+                                       bg-white dark:bg-gray-700 py-2.5 px-3 text-sm
+                                       text-gray-800 dark:text-white placeholder-gray-400
+                                       focus:border-[#004A54] focus:outline-none
+                                       focus:ring-1 focus:ring-[#004A54]"
+                            >
+                        </div>
+
+                        {{-- ALAMAT EMAIL --}}
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Alamat Email <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="email"
+                                name="email"
+                                value="{{ old('email', $user->email ?? '') }}"
+                                required
+                                placeholder="Contoh: budi@pln.co.id"
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600
+                                       bg-white dark:bg-gray-700 py-2.5 px-3 text-sm
+                                       text-gray-800 dark:text-white placeholder-gray-400
+                                       focus:border-[#004A54] focus:outline-none
+                                       focus:ring-1 focus:ring-[#004A54]"
+                            >
+                        </div>
+
+                        {{-- KATA SANDI --}}
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Kata Sandi (Password) {!! ($user ?? false) ? '' : '<span class="text-red-500">*</span>' !!}
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                {{ ($user ?? false) ? '' : 'required' }}
+                                minlength="8"
+                                placeholder="{{ ($user ?? false) ? 'Kosongkan jika tidak diubah' : 'Minimal 8 karakter' }}"
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600
+                                       bg-white dark:bg-gray-700 py-2.5 px-3 text-sm
+                                       text-gray-800 dark:text-white placeholder-gray-400
+                                       focus:border-[#004A54] focus:outline-none
+                                       focus:ring-1 focus:ring-[#004A54]"
+                            >
+                        </div>
+
+                    </div>
+
+                </div>
             </div>
-        </footer>
-    </div>
-</div>
+
+
+            <hr class="border-gray-200 dark:border-gray-700">
+
+
+            {{-- BAGIAN 2: IDENTITAS PEGAWAI & AKSES --}}
+            <div>
+                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-4">
+                    Identitas & Hak Akses
+                </h3>
+
+                <div class="space-y-6">
+
+                    {{-- ROW 2: NIP, Departemen/Unit, Role --}}
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                        {{-- NIP --}}
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Nomor Induk Pegawai (NIP) <span class="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                name="nip"
+                                value="{{ old('nip', $user->nip ?? '') }}"
+                                required
+                                placeholder="Contoh: 19920815XXXX"
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600
+                                       bg-white dark:bg-gray-700 py-2.5 px-3 text-sm
+                                       text-gray-800 dark:text-white placeholder-gray-400
+                                       focus:border-[#004A54] focus:outline-none
+                                       focus:ring-1 focus:ring-[#004A54]"
+                            >
+                        </div>
+
+                        {{-- DEPARTEMEN / UNIT --}}
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Departemen / Unit <span class="text-red-500">*</span>
+                            </label>
+                            <select
+                                name="department"
+                                required
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600
+                                       bg-white dark:bg-gray-700 py-2.5 px-3 text-sm
+                                       text-gray-800 dark:text-white focus:border-[#004A54]
+                                       focus:outline-none focus:ring-1 focus:ring-[#004A54]"
+                            >
+                                <option value="" disabled {{ old('department', $user->department ?? '') ? '' : 'selected' }}>Pilih Departemen / Unit</option>
+                                @php
+                                    $departemenList = [
+                                        'PUSHARLIS', 'UID JAWA BARAT', 'UIP JBT', 'UIT JBT', 'UP2B JAWA BARAT',
+                                        'UP2D JAWA BARAT', 'UP3 BANDUNG', 'UP3 CIANJUR', 'UP3 CIMAHI', 'UP3 CIREBON',
+                                        'UP3 GARUT', 'UP3 INDRAMAYU', 'UP3 KARAWANG', 'UP3 MAJALAYA',
+                                        'UP3 PURWAKARTA', 'UP3 SUKABUMI', 'UP3 SUMEDANG', 'UP3 TASIKMALAYA',
+                                        'UPT CIREBON', 'UPT KARAWANG', 'USAT CIRATA', 'STI JABAR'
+                                    ];
+                                @endphp
+                                @foreach($departemenList as $dept)
+                                    <option value="{{ $dept }}" @selected(old('department', $user->department ?? '') == $dept)>{{ $dept }}</option>
+                                @endforeach
+                                <option value="Lainnya" @selected(old('department', $user->department ?? '') == 'Lainnya')>Lainnya...</option>
+                            </select>
+                        </div>
+
+                        {{-- ROLE / PERAN --}}
+                        <div>
+                            <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                Peran / Hak Akses <span class="text-red-500">*</span>
+                            </label>
+                            <select
+                                name="role"
+                                required
+                                class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600
+                                       bg-white dark:bg-gray-700 py-2.5 px-3 text-sm
+                                       text-gray-800 dark:text-white focus:border-[#004A54]
+                                       focus:outline-none focus:ring-1 focus:ring-[#004A54]"
+                            >
+                                <option value="" disabled {{ old('role', $user->role ?? '') ? '' : 'selected' }}>Pilih Peran</option>
+                                <option value="Admin" @selected(old('role', $user->role ?? '') === 'Admin')>Admin</option>
+                                <option value="Manager" @selected(old('role', $user->role ?? '') === 'Manager')>Manager</option>
+                                <option value="Staff" @selected(old('role', $user->role ?? '') === 'Staff')>Staff</option>
+                            </select>
+                        </div>
+
+                    </div>
+
+                    {{-- ROW 3: Status Akun --}}
+                    <div>
+                        <label class="text-xs font-bold text-gray-700 dark:text-gray-300 block mb-2">
+                            Status Akun <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex items-center gap-6">
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="radio" name="status" value="Aktif" {{ old('status', $user->status ?? 'Aktif') == 'Aktif' ? 'checked' : '' }}
+                                    class="w-4 h-4 text-[#004A54] focus:ring-[#004A54] cursor-pointer">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-[#004A54] transition-colors">Aktif</span>
+                            </label>
+
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="radio" name="status" value="Non-Aktif" {{ old('status', $user->status ?? '') == 'Non-Aktif' ? 'checked' : '' }}
+                                    class="w-4 h-4 text-red-600 focus:ring-red-600 cursor-pointer">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300 group-hover:text-red-600 transition-colors">Non-Aktif</span>
+                            </label>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {{-- INFO BANNER --}}
+            <div class="flex items-start gap-3 rounded-lg
+                        bg-cyan-50 dark:bg-cyan-900/20
+                        border border-cyan-100 dark:border-cyan-900/40
+                        px-4 py-3 mt-6">
+
+                <svg class="w-4 h-4 text-cyan-600 dark:text-cyan-400 mt-0.5 shrink-0"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor"
+                     stroke-width="1.8">
+
+                    <circle cx="12" cy="12" r="9" stroke-linecap="round" stroke-linejoin="round" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8h.01M11 12h1v4h1" />
+
+                </svg>
+
+                <p class="text-xs text-cyan-800 dark:text-cyan-300">
+                    {{ ($user ?? false) 
+                        ? 'Perubahan profil akan segera diterapkan. Harap informasikan kepada pengguna bersangkutan jika terdapat perubahan kredensial login.' 
+                        : 'Pastikan email dan password dicatat untuk diinformasikan kepada pemilik akun agar dapat mengakses sistem.' }}
+                </p>
+
+            </div>
+
+        </div>
+
+
+        {{-- BUTTONS --}}
+        <div class="flex justify-end gap-3 px-8 py-5 border-t border-gray-100 dark:border-gray-700">
+
+            <a
+                href="{{ route('manage-user') }}"
+                class="border border-gray-300 dark:border-gray-600
+                       text-gray-700 dark:text-gray-300
+                       px-6 py-2.5 rounded-md text-sm font-medium
+                       hover:bg-gray-50 dark:hover:bg-gray-700
+                       transition-colors"
+            >
+                Batal
+            </a>
+
+            <button
+                type="submit"
+                class="inline-flex items-center gap-2
+                       bg-[#004A54] text-white
+                       px-6 py-2.5 rounded-md
+                       text-sm font-medium shadow-sm
+                       hover:bg-[#00363d]
+                       transition-colors"
+            >
+
+                <svg class="w-4 h-4"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor"
+                     stroke-width="2">
+
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M5.25 5.25h13.5v13.5H5.25z" />
+
+                    <path stroke-linecap="round"
+                          stroke-linejoin="round"
+                          d="M8.25 5.25v4.5h7.5v-4.5" />
+
+                </svg>
+
+                {{ ($user ?? false) ? 'Simpan Perubahan' : 'Simpan Pengguna' }}
+
+            </button>
+
+        </div>
+
+    </form>
+
+</main>
+
 @endsection

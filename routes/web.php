@@ -80,18 +80,25 @@ Route::middleware('auth')->group(function () {
     // Tambahkan 1 baris ini di bawahnya:
     Route::delete('settings/sessions', [SettingsController::class, 'logoutOtherDevices'])->name('settings.sessions.destroy');
 
-    // ==========================================
+// ==========================================
     // MANAGE USER
     // ==========================================
+    // 1. Tampilkan daftar user
+    Route::get('manage-user', [ManageUserController::class, 'index'])->name('manage-user');
+    
+    // 2. Tambah user manual
     Route::get('manage-user/create', [AddUserController::class, 'create'])->name('manage-user.create');
     Route::post('manage-user/store', [AddUserController::class, 'store'])->name('manage-user.store');
-    Route::get('manage-user', [ManageUserController::class, 'index'])->name('manage-user');
-    Route::get('/import', [AddUserController::class, 'importForm'])->name('manage-user.import.form');
-    Route::post('/import', [AddUserController::class, 'importStore'])->name('manage-user.import.store');
+    
+    // 3. Edit & Hapus user
     Route::get('manage-user/{id}/edit', [ManageUserController::class, 'edit'])->name('manage-user.edit');
+    Route::patch('manage-user/{user}', [AddUserController::class, 'update'])->name('manage-user.update');
     Route::patch('manage-user/{id}', [ManageUserController::class, 'update'])->name('manage-user.update');
     Route::delete('manage-user/{id}', [ManageUserController::class, 'destroy'])->name('manage-user.destroy');
 
+    // 4. Import User
+    Route::get('manage-user/import', [AddUserController::class, 'importForm'])->name('manage-user.import.form');
+    Route::post('manage-user/import', [AddUserController::class, 'importStore'])->name('manage-user.import.store');
     // ==========================================
     // MANAGE UNIT
     // ==========================================

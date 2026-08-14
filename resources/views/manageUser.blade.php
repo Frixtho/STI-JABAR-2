@@ -1,4 +1,4 @@
-@extends('layouts.app', ['title' => 'Manage User — PLN Financial'])
+@extends('layouts.app', ['title' => 'Manage User — PLN Asset Management'])
 
 @section('content')
 <div class="min-h-screen flex bg-gray-50 dark:bg-gray-900">
@@ -58,15 +58,26 @@
             {{-- Header Title & Action Button --}}
             <div class="flex items-center justify-between">
                 <h1 class="text-lg font-bold text-pln-800 dark:text-white tracking-wide">Manage User</h1>
-                <a href="{{ route('manage-user.create') }}" class="inline-flex items-center justify-center bg-[#004A54] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#00363d] transition-colors">
-                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                    Add New User
-                </a>
+                
+                <div class="flex items-center gap-3">
+                    {{-- TOMBOL IMPORT YANG MENGARAH KE HALAMAN BARU --}}
+                    <a href="{{ route('manage-user.import.form') }}" class="inline-flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+                        </svg>
+                        Import File CSV/Excel
+                    </a>
+
+                    <a href="{{ route('manage-user.create') }}" class="inline-flex items-center justify-center bg-[#004A54] text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-[#00363d] transition-colors shadow-sm">
+                        <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                        </svg>
+                        Add New User
+                    </a>
+                </div>
             </div>
 
-            {{-- Filter & Cari --}}
+           {{-- Filter & Cari --}}
             <div class="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 shadow-sm">
                 <form action="{{ route('manage-user') }}" method="GET" class="w-full flex flex-row flex-wrap items-center gap-4">
 
@@ -84,7 +95,7 @@
                         <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Role:</label>
                         <div class="relative w-28">
                             <select name="role" onchange="this.form.submit()" class="w-full appearance-none rounded-lg border border-gray-300 dark:border-gray-600 py-2 pl-3 pr-7 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] cursor-pointer">
-                                <option value="All" {{ request('role') == 'All' ? 'selected' : '' }}>All</option>
+                                <option value="All" {{ request('role') == 'All' || !request('role') ? 'selected' : '' }}>All</option>
                                 <option value="Admin" {{ request('role') == 'Admin' ? 'selected' : '' }}>Admin</option>
                                 <option value="Manager" {{ request('role') == 'Manager' ? 'selected' : '' }}>Manager</option>
                                 <option value="Staff" {{ request('role') == 'Staff' ? 'selected' : '' }}>Staff</option>
@@ -99,7 +110,7 @@
                         <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Status:</label>
                         <div class="relative w-28">
                             <select name="status" onchange="this.form.submit()" class="w-full appearance-none rounded-lg border border-gray-300 dark:border-gray-600 py-2 pl-3 pr-7 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] cursor-pointer">
-                                <option value="All" {{ request('status') == 'All' ? 'selected' : '' }}>All</option>
+                                <option value="All" {{ request('status') == 'All' || !request('status') ? 'selected' : '' }}>All</option>
                                 <option value="Aktif" {{ request('status') == 'Aktif' ? 'selected' : '' }}>Aktif</option>
                                 <option value="Non-Aktif" {{ request('status') == 'Non-Aktif' ? 'selected' : '' }}>Non-Aktif</option>
                             </select>
@@ -109,8 +120,15 @@
                         </div>
                     </div>
 
+                    {{-- Tombol Cari tambahan (Opsional agar user bisa tekan Enter / klik cari) --}}
                     <div class="shrink-0">
-                        <a href="{{ route('manage-user') }}" class="border-2 border-[#004A54] dark:border-accent-400 text-[#004A54] dark:text-accent-400 px-5 py-1.5 rounded-lg text-sm font-bold hover:bg-cyan-50/50 dark:hover:bg-gray-700 transition-all block text-center tracking-wide">
+                        <button type="submit" class="bg-[#004A54] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#00363d] transition-colors">
+                            Cari
+                        </button>
+                    </div>
+
+                    <div class="shrink-0">
+                        <a href="{{ route('manage-user') }}" class="border-2 border-[#004A54] dark:border-accent-400 text-[#004A54] dark:text-accent-400 px-5 py-2 rounded-lg text-sm font-bold hover:bg-cyan-50/50 dark:hover:bg-gray-700 transition-all block text-center tracking-wide">
                             Reset
                         </a>
                     </div>
@@ -228,17 +246,7 @@
 </div>
 
 <script>
-    const adminMenuToggle = document.getElementById('adminMenuToggle');
-    const adminSubmenu = document.getElementById('adminSubmenu');
-    const adminMenuChevron = document.getElementById('adminMenuChevron');
-
-    if (adminMenuToggle && adminSubmenu) {
-        adminMenuToggle.addEventListener('click', () => {
-            adminSubmenu.classList.toggle('hidden');
-            adminMenuChevron.classList.toggle('rotate-180');
-        });
-    }
-    
+    // Hanya dideklarasikan satu kali
     const adminMenuToggle = document.getElementById('adminMenuToggle');
     const adminSubmenu = document.getElementById('adminSubmenu');
     const adminMenuChevron = document.getElementById('adminMenuChevron');

@@ -14,23 +14,27 @@ class ManageUserController extends Controller
     {
         $query = User::query();
 
-        if ($request->has('search') && $request->search != '') {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
+        // Filter Pencarian Teks (Nama atau Email)
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
                 $q->where('name', 'ILIKE', "%{$search}%")
                   ->orWhere('email', 'ILIKE', "%{$search}%");
             });
         }
 
-        if ($request->has('role') && $request->role != 'All' && $request->role != '') {
-            $query->where('role', $request->role);
+        // Filter Berdasarkan Role (Kecuali bernilai 'All')
+        if ($request->filled('role') && $request->input('role') !== 'All') {
+            $query->where('role', $request->input('role')); 
         }
 
-        if ($request->has('status') && $request->status != 'All' && $request->status != '') {
-            $query->where('status', $request->status);
+        // Filter Berdasarkan Status (Kecuali bernilai 'All')
+        if ($request->filled('status') && $request->input('status') !== 'All') {
+            $query->where('status', $request->input('status'));
         }
 
-        $users = $query->orderBy('created_at', 'desc')->paginate(7)->withQueryString();
+        // Pagination dengan mempertahankan parameter query agar filter tidak hilang saat pindah halaman
+        $users = $query->orderBy('id', 'DESC')->paginate(7)->withQueryString();
 
         return view('manageUser', compact('users'));
     }
@@ -44,7 +48,7 @@ class ManageUserController extends Controller
 
         $user = User::findOrFail($id);
 
-        return view('editUser', compact('user'));
+        return view('addUser', compact('user'));
     }
 
     public function update(Request $request, $id)

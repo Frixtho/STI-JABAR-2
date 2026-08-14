@@ -6,45 +6,37 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class AddUserController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Inisialisasi Query Builder untuk model User
         $query = User::query();
 
-        // 2. Filter Berdasarkan Pencarian Teks (Nama / Email)
         if ($request->has('search') && $request->search != '') {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'ILIKE', "%{$search}%") // Menggunakan ILIKE agar case-insensitive di Postgres
+                $q->where('name', 'ILIKE', "%{$search}%")
                 ->orWhere('email', 'ILIKE', "%{$search}%");
             });
         }
 
-        // 3. Filter Berdasarkan Pilihan Role (Penting!)
         if ($request->has('role') && $request->role != 'All' && $request->role != '') {
-            // Sesuaikan 'role' dengan nama kolom di database kamu (misal huruf kecil semua atau uppercase)
-            // Jika di database disimpan dengan huruf kecil (admin, staff), gunakan: strtolower($request->role)
             $query->where('role', $request->role); 
         }
 
-        // 4. Filter Berdasarkan Pilihan Status
         if ($request->has('status') && $request->status != 'All' && $request->status != '') {
             $query->where('status', $request->status);
         }
 
-        // 5. Ambil data hasil filter dengan pagination (sesuai Figma: 7 data per halaman)
-        // append dengan withQueryString agar ketika pindah halaman pagination, filternya tidak hilang
         $users = $query->paginate(7)->withQueryString();
 
-        // 6. Return ke view kamu dengan membawa data users yang sudah ter-filter
         return view('manageUser', compact('users'));
     }
+    
     public function create()
     {
-        // Menampilkan halaman form tambah user (image_526a5a.png)
         return view('addUser'); 
     }
 
@@ -57,40 +49,52 @@ class AddUserController extends Controller
             'department' => 'required|string',
             'role'       => 'required|string',
             'status'     => 'required|string',
-            'password'   => 'required|string|min:8', // Wajib diisi saat create
+            'password'   => 'required|string|min:8',
         ]);
 
-        // Lakukan Hash pada password
         $validated['password'] = Hash::make($request->password);
-
         User::create($validated);
 
         return redirect()->route('manage-user')->with('success', 'Pengguna berhasil ditambahkan.');
+    }
+
+    public function edit(User $user)
+    {
+        return view('addUser', compact('user'));
     }
 
     public function update(Request $request, User $user)
     {
         $validated = $request->validate([
             'name'       => 'required|string|max:255',
-            'email'      => ['required', 'email', Rule::unique('users')->ignore($user->id)],
+            'email'      => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
             'nip'        => 'required|string',
             'department' => 'required|string',
             'role'       => 'required|string',
             'status'     => 'required|string',
-            'password'   => 'nullable|string|min:8', // Opsional saat update
+            'password'   => 'nullable|string|min:8', 
         ]);
 
-        // Cek apakah admin mengisi password baru
+        // Cek jika kolom password diisi oleh admin
         if ($request->filled('password')) {
             $validated['password'] = Hash::make($request->password);
         } else {
-            // Jika tidak diisi, jangan update kolom password
+            // Hapus field password agar password lama tidak tertimpa kosong/null
             unset($validated['password']);
         }
 
+        // Eksekusi update data ke database
         $user->update($validated);
 
         return redirect()->route('manage-user')->with('success', 'Data pengguna berhasil diperbarui.');
+    }
+
+    public function destroy(User $user)
+    {
+        $userName = $user->name;
+        $user->delete();
+
+        return redirect()->route('manage-user')->with('success', "Pengguna {$userName} berhasil dihapus.");
     }
 
     public function importForm()
@@ -101,71 +105,151 @@ class AddUserController extends Controller
     public function importStore(Request $request)
     {
         $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt'],
+            'files'   => ['required', 'array'],
+            'files.*' => ['required', 'file', 'max:10240'],
         ]);
 
-        $file = $request->file('file');
+        if (!$request->hasFile('files')) {
+            return back()->with('error', 'Tidak ada file yang diunggah.');
+        }
+
         $skippedReasons = [];
         $successCount = 0;
 
-        try {
-            $handle = fopen($file->getRealPath(), 'r');
-            // Deteksi separator (koma atau titik koma)
-            $sampleLine = fgets($handle);
-            rewind($handle);
-            $delimiter = (substr_count($sampleLine, ';') > substr_count($sampleLine, ',')) ? ';' : ',';
+        foreach ($request->file('files') as $file) {
+            try {
+                $extension = strtolower($file->getClientOriginalExtension());
+                $dataRows = [];
 
-            $rowIndex = 0;
-            while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
-                $rowIndex++;
-
-                // Skip header (baris 1)
-                if ($rowIndex == 1) continue;
-                
-                // Pastikan minimal ada kolom "Nama User" (index 1)
-                if (count($row) < 2 || empty(trim($row[1]))) {
-                    continue; 
-                }
-
-                $namaUser = trim($row[1]);
-                $keterangan = trim($row[2] ?? '');
-
-                // Generate Email Dummy (Karena di excel tidak ada email)
-                // Contoh: heru.susanto_2@pln.co.id
-                $emailSlug = Str::slug($namaUser, '.');
-                $email = $emailSlug . '_' . $rowIndex . '@pln.co.id';
-
-                // Simpan atau abaikan jika duplikat
-                $userExists = User::where('name', $namaUser)->first();
-                if ($userExists) {
-                    $skippedReasons[] = "Baris ke-{$rowIndex}: User dengan nama '{$namaUser}' sudah ada.";
+                if (!in_array($extension, ['xlsx', 'csv', 'txt'])) {
+                    $skippedReasons[] = "File " . $file->getClientOriginalName() . " dilewati: Format harus .xlsx atau .csv";
                     continue;
                 }
 
-                User::create([
-                    'name'       => $namaUser,
-                    'email'      => $email,
-                    'password'   => Hash::make('pln12345'), // Default password
-                    'role'       => 'Staff',                // Default role
-                    'department' => $keterangan,            // Keterangan PUSHARLIS dimasukkan sbg departemen
-                    // 'nip'     => '...',                 // Jika di database NIP nullable
-                    // 'status'  => 'Aktif',               // Sesuaikan dengan struktur DB
-                ]);
+                if (in_array($extension, ['csv', 'txt'])) {
+                    $handle = fopen($file->getRealPath(), 'r');
+                    $sampleLine = fgets($handle);
+                    rewind($handle);
+                    $delimiter = (substr_count($sampleLine, ';') > substr_count($sampleLine, ',')) ? ';' : ',';
 
-                $successCount++;
+                    while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                        $dataRows[] = $row;
+                    }
+                    fclose($handle);
+                } 
+                elseif ($extension === 'xlsx') {
+                    $dataRows = $this->parseXlsxNative($file->getRealPath());
+                }
+
+                if (empty($dataRows)) {
+                    $skippedReasons[] = "File " . $file->getClientOriginalName() . " kosong atau gagal dibaca.";
+                    continue;
+                }
+
+                $rowIndex = 0;
+                foreach ($dataRows as $row) {
+                    $rowIndex++;
+                    if ($rowIndex == 1) continue; 
+
+                    if (count($row) < 2 || empty(trim($row[1] ?? ''))) {
+                        continue; 
+                    }
+
+                    $namaUser = trim($row[1]);
+                    $keterangan = trim($row[2] ?? '');
+
+                    $emailSlug = Str::slug($namaUser, '.');
+                    $email = $emailSlug . '_' . $rowIndex . '@pln.co.id';
+
+                    $userExists = User::where('name', $namaUser)->first();
+                    if ($userExists) {
+                        $skippedReasons[] = "Baris ke-{$rowIndex} (" . $file->getClientOriginalName() . "): User '{$namaUser}' sudah ada.";
+                        continue;
+                    }
+
+                    User::create([
+                        'name'       => $namaUser,
+                        'email'      => $email,
+                        'password'   => Hash::make('pln12345'),
+                        'role'       => 'Staff',                
+                        'department' => $keterangan,            
+                        'status'     => 'Aktif', 
+                    ]);
+
+                    $successCount++;
+                }
+
+            } catch (\Exception $e) {
+                $skippedReasons[] = "Gagal memproses " . $file->getClientOriginalName() . ": " . $e->getMessage();
             }
-            fclose($handle);
-
-        } catch (\Exception $e) {
-            if (isset($handle) && is_resource($handle)) fclose($handle);
-            return back()->with('error', 'Gagal memproses file: ' . $e->getMessage());
         }
 
-        $message = "Berhasil mengimpor {$successCount} daftar pengguna.";
+        $message = "Berhasil mengimpor {$successCount} data User.";
         if (count($skippedReasons) > 0) {
             session()->flash('import_skipped_reasons', $skippedReasons);
         }
 
         return redirect()->route('manage-user')->with('success', $message);
+    }
+
+    private function parseXlsxNative($filePath)
+    {
+        $zip = new \ZipArchive;
+        if ($zip->open($filePath) === true) {
+            $sharedStrings = [];
+            
+            if (($ssXml = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
+                $ss = simplexml_load_string($ssXml);
+                foreach ($ss->si as $val) {
+                    $text = '';
+                    if (isset($val->t)) {
+                        $text = (string)$val->t;
+                    } elseif (isset($val->r)) {
+                        foreach ($val->r as $r) { $text .= (string)$r->t; }
+                    }
+                    $sharedStrings[] = $text;
+                }
+            }
+
+            $sheet1Xml = $zip->getFromName('xl/worksheets/sheet1.xml');
+            if (!$sheet1Xml) {
+                $zip->close();
+                return [];
+            }
+            
+            $sheet1 = simplexml_load_string($sheet1Xml);
+            $rows = [];
+            
+            foreach ($sheet1->sheetData->row as $row) {
+                $rowData = [];
+                foreach ($row->c as $c) {
+                    $r = (string)$c['r']; 
+                    $colAlpha = preg_replace('/[0-9]/', '', $r);
+                    $colIndex = 0;
+                    for ($i = 0; $i < strlen($colAlpha); $i++) {
+                        $colIndex = $colIndex * 26 + (ord($colAlpha[$i]) - 64);
+                    }
+                    $colIndex -= 1;
+                    
+                    $val = (string)$c->v;
+                    if (isset($c['t']) && (string)$c['t'] == 's') {
+                        $val = $sharedStrings[(int)$val] ?? '';
+                    } elseif (isset($c['t']) && (string)$c['t'] == 'inlineStr') {
+                        $val = (string)$c->is->t;
+                    }
+                    $rowData[$colIndex] = trim($val);
+                }
+                
+                $maxKey = empty($rowData) ? -1 : max(array_keys($rowData));
+                $normalizedRow = [];
+                for ($i = 0; $i <= $maxKey; $i++) {
+                    $normalizedRow[] = $rowData[$i] ?? '';
+                }
+                $rows[] = $normalizedRow;
+            }
+            $zip->close();
+            return $rows;
+        }
+        return [];
     }
 }

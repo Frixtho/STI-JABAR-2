@@ -9,14 +9,7 @@
         {{-- Top bar --}}
         <header class="bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 px-6 py-4 flex items-center justify-between gap-4">
             <div class="relative w-full max-w-sm">
-                <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <circle cx="11" cy="11" r="7" stroke-linecap="round" stroke-linejoin="round" />
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m20 20-3.5-3.5" />
-                    </svg>
-                </span>
-                <input type="text" placeholder="Cari asset atau data..."
-                    class="w-full rounded-md border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 py-2 pl-10 pr-3 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:border-pln-700 focus:bg-white dark:focus:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-pln-700/20">
+                <span class="absolute inset-y-0 left-3 flex items-center text-gray-400"></span>
             </div>
 
             <div class="flex items-center gap-5 shrink-0">

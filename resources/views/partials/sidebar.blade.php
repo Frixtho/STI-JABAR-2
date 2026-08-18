@@ -32,8 +32,9 @@
                 onclick="this.nextElementSibling.classList.toggle('hidden'); this.querySelector('.chevron-icon').classList.toggle('rotate-180');"
                 class="w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium {{ $assetActive ? 'text-white bg-white/5' : 'text-pln-100 hover:bg-white/5' }}">
                 <span class="flex items-center gap-3">
+                    {{-- Ikon Gedung/Perusahaan Baru --}}
                     <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M3.75 9v.75c0 .414.336.75.75.75h15a.75.75 0 0 0 .75-.75V9m-16.5 0-1.5-4.5h18l-1.5 4.5m-16.5 0h16.5" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12m-.75 4.5H21m-3.75 3.75h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Zm0 3h.008v.008h-.008v-.008Z" />
                     </svg>
                     Manage Asset
                 </span>
@@ -127,13 +128,6 @@
             </div>
         </div>
         <div class="mt-3 space-y-1">
-            <a href="#" class="flex items-center gap-2 px-2 py-1.5 text-sm text-pln-100 hover:text-white">
-                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                    <circle cx="12" cy="12" r="9" stroke-linecap="round" stroke-linejoin="round" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.5 9a2.5 2.5 0 1 1 3.5 2.29c-.7.32-1 .8-1 1.71M12 17h.01" />
-                </svg>
-                Help
-            </a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit" class="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-pln-100 hover:text-white">

@@ -117,20 +117,8 @@
                             </svg>
                         </button> 
                     </div>
-                    <a href="#" class="text-xs font-medium text-pln-700 hover:text-pln-800">
-                            Forgot Password?
-                    </a>
                 </div>
-
-                {{-- Remember device --}}
-                <div class="flex items-center gap-2 pt-1">
-                    <input id="remember" name="remember" type="checkbox"
-                        class="h-4 w-4 rounded border-gray-300 text-pln-700 focus:ring-pln-700/40">   
-                    <label for="remember" class="text-sm text-gray-600">
-                        Remember this device for 30 days
-                    </label>
-                </div>
-
+                
                 {{-- Submit --}}
                 <button type="submit"
                     class="w-full flex items-center justify-center gap-2 rounded-md bg-pln-800 py-2.5 text-xs font-semibold uppercase tracking-wide text-white hover:bg-pln-700 transition-colors">

@@ -70,15 +70,22 @@ class SettingsController extends Controller
 
     public function updatePassword(Request $request)
     {
-        $request->validateWithBag('updatePassword', [
-            'current_password' => ['required', 'current_password'],
+        // 1. Validasi HANYA meminta kata sandi baru dan konfirmasinya
+        $validated = $request->validateWithBag('updatePassword', [
             'password' => ['required', 'min:8', 'confirmed'],
+        ], [
+            'password.required' => 'Kata sandi baru wajib diisi.',
+            'password.min' => 'Kata sandi baru minimal 8 karakter.',
+            'password.confirmed' => 'Konfirmasi kata sandi baru tidak cocok.',
         ]);
 
-        $request->user()->update([
-            'password' => Hash::make($request->password),
+        // 2. Langsung update password user yang sedang login
+        $user = $request->user();
+        $user->update([
+            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
         ]);
 
+        // 3. Kembalikan dengan status sukses
         return back()->with('status', 'password-updated');
     }
 

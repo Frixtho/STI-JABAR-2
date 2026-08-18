@@ -159,8 +159,11 @@
                         
                         {{-- Pesan Sukses Khusus Ubah Password --}}
                         @if (session('status') === 'password-updated')
-                            <div class="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-4 py-3 text-sm text-green-700 dark:text-green-400">
-                                Kata sandi Anda berhasil diperbarui!
+                            <div class="rounded-md border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30 px-4 py-3 text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+                                <svg class="w-4 h-4 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                                </svg>
+                                <span>Kata sandi Anda berhasil diperbarui!</span>
                             </div>
                         @endif
 
@@ -171,40 +174,26 @@
                                 </svg>
                                 <h3 class="text-sm font-bold text-gray-700 dark:text-gray-200">Ubah Kata Sandi</h3>
                             </div>
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Pastikan kata sandi Anda kuat dan unik.</p>
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Atur kata sandi baru untuk akun Anda tanpa perlu memasukkan kata sandi lama.</p>
 
-                            <form method="POST" action="{{ route('settings.password') }}" class="mt-4 space-y-4">
+                            <form method="POST" action="{{ route('settings.password') }}" class="mt-6 space-y-5">
                                 @csrf
                                 @method('PATCH')
 
-                                <div>
-                                    <label for="current_password" class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Kata Sandi Saat Ini</label>
-                                    <input id="current_password" name="current_password" type="password" required
-                                        class="mt-1.5 w-full rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-pln-700 focus:outline-none focus:ring-2 focus:ring-pln-700/20">
-                                    
-                                    {{-- Pesan error jika password lama salah --}}
-                                    @error('current_password', 'updatePassword')
-                                        <p class="mt-1 text-xs text-red-500 font-medium">{{ $message }}</p>
-                                    @enderror
-                                    @error('current_password')
-                                        <p class="mt-1 text-xs text-red-500 font-medium">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <div>
                                         <label for="password" class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Kata Sandi Baru</label>
                                         <input id="password" name="password" type="password" required minlength="8"
-                                            class="mt-1.5 w-full rounded-md border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-pln-700 focus:outline-none focus:ring-2 focus:ring-pln-700/20">
+                                            class="mt-1.5 w-full rounded-md border @if($errors->updatePassword->has('password') || $errors->has('password')) border-red-500 @else border-gray-200 dark:border-gray-600 @endif bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-pln-700 focus:outline-none focus:ring-2 focus:ring-pln-700/20">
                                         
-                                        {{-- Pesan error jika password baru tidak valid --}}
-                                        @error('password', 'updatePassword')
-                                            <p class="mt-1 text-xs text-red-500 font-medium">{{ $message }}</p>
-                                        @enderror
-                                        @error('password')
-                                            <p class="mt-1 text-xs text-red-500 font-medium">{{ $message }}</p>
-                                        @enderror
+                                        {{-- Pesan error jika password baru bermasalah --}}
+                                        @if ($errors->updatePassword->has('password'))
+                                            <p class="mt-1 text-xs text-red-500 font-medium">{{ $errors->updatePassword->first('password') }}</p>
+                                        @elseif ($errors->has('password'))
+                                            <p class="mt-1 text-xs text-red-500 font-medium">{{ $errors->first('password') }}</p>
+                                        @endif
                                     </div>
+                                    
                                     <div>
                                         <label for="password_confirmation" class="block text-xs font-semibold text-gray-700 dark:text-gray-300">Konfirmasi Kata Sandi Baru</label>
                                         <input id="password_confirmation" name="password_confirmation" type="password" required minlength="8"
@@ -212,17 +201,18 @@
                                     </div>
                                 </div>
 
-                                <div class="flex items-center justify-end gap-3 pt-2">
+                                <div class="flex items-center justify-end gap-3 pt-4 border-t border-gray-50 dark:border-gray-700">
                                     <button type="reset" class="px-4 py-2.5 rounded-md text-sm font-medium text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700">
                                         Batalkan
                                     </button>
-                                    <button type="submit" class="px-4 py-2.5 rounded-md text-sm font-semibold text-white bg-pln-800 hover:bg-pln-700">
-                                        Perbarui Kata Sandi
+                                    <button type="submit" class="px-5 py-2.5 rounded-md text-sm font-semibold text-white bg-pln-800 hover:bg-pln-700 shadow-sm">
+                                        Simpan Kata Sandi
                                     </button>
                                 </div>
                             </form>
                         </div>
 
+                        {{-- Sesi Aktif --}}
                         <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 p-6">
                             <div class="flex items-center gap-2">
                                 <svg class="w-4 h-4 text-pln-700 dark:text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -233,8 +223,6 @@
                             <p class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Riwayat login akun Anda di berbagai perangkat berdasarkan database sistem.</p>
 
                             <div class="mt-4 divide-y divide-gray-100 dark:divide-gray-700">
-                                
-                                {{-- Looping Data Session dari Database --}}
                                 @foreach ($sessions as $session)
                                     <div class="flex items-center justify-between py-3.5">
                                         <div class="flex items-center gap-3">
@@ -244,8 +232,6 @@
                                             <div>
                                                 <p class="text-sm font-semibold text-gray-700 dark:text-gray-200">
                                                     {{ $session->agent }}
-                                                    
-                                                    {{-- Tanda "SESI INI" jika ID Session cocok --}}
                                                     @if ($session->is_current_device)
                                                         <span class="ml-1.5 inline-flex text-[10px] font-semibold text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-900/30 rounded-full px-2 py-0.5 align-middle">SESI INI</span>
                                                     @endif
@@ -257,7 +243,6 @@
                                 @endforeach
                             </div>
 
-                            {{-- Tombol Log Out Perangkat Lain (Hanya muncul jika ada lebih dari 1 sesi aktif) --}}
                             @if(count($sessions) > 1)
                                 <div class="mt-2 pt-4 border-t border-gray-100 dark:border-gray-700 text-right">
                                     <form method="POST" action="{{ route('settings.sessions.destroy') }}" onsubmit="return confirm('Anda yakin ingin mengeluarkan akun dari semua perangkat lain?');">

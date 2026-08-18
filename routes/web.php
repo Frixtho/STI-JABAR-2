@@ -75,7 +75,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('settings', [SettingsController::class, 'edit'])->name('settings');
     Route::patch('settings', [SettingsController::class, 'update'])->name('settings.update');
-    Route::patch('settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
+    Route::patch('/settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
     
     // Tambahkan 1 baris ini di bawahnya:
     Route::delete('settings/sessions', [SettingsController::class, 'logoutOtherDevices'])->name('settings.sessions.destroy');

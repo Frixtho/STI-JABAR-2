@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\AssetHistory; // <-- Pastikan model AssetHistory di-import
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -30,7 +31,7 @@ class AddUserController extends Controller
             $query->where('status', $request->status);
         }
 
-        $users = $query->paginate(7)->withQueryString();
+        $users = $query->paginate(10)->withQueryString();
 
         return view('manageUser', compact('users'));
     }
@@ -53,7 +54,15 @@ class AddUserController extends Controller
         ]);
 
         $validated['password'] = Hash::make($request->password);
-        User::create($validated);
+        
+        $user = User::create($validated);
+
+        // Catat riwayat penambahan user
+        AssetHistory::create([
+            'user_id' => auth()->id(),
+            'action' => 'TAMBAH',
+            'description' => "Menambahkan pengguna baru: {$user->name} ({$user->email}).",
+        ]);
 
         return redirect()->route('manage-user')->with('success', 'Pengguna berhasil ditambahkan.');
     }
@@ -67,7 +76,7 @@ class AddUserController extends Controller
     {
         $validated = $request->validate([
             'name'       => 'required|string|max:255',
-            'email'      => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
+            'email'      => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'nip'        => 'required|string',
             'department' => 'required|string',
             'role'       => 'required|string',
@@ -75,16 +84,20 @@ class AddUserController extends Controller
             'password'   => 'nullable|string|min:8', 
         ]);
 
-        // Cek jika kolom password diisi oleh admin
         if ($request->filled('password')) {
             $validated['password'] = Hash::make($request->password);
         } else {
-            // Hapus field password agar password lama tidak tertimpa kosong/null
             unset($validated['password']);
         }
 
-        // Eksekusi update data ke database
         $user->update($validated);
+
+        // Catat riwayat pembaruan user
+        AssetHistory::create([
+            'user_id' => auth()->id(),
+            'action' => 'UBAH',
+            'description' => "Memperbarui profil pengguna: {$user->name}.",
+        ]);
 
         return redirect()->route('manage-user')->with('success', 'Data pengguna berhasil diperbarui.');
     }
@@ -93,6 +106,13 @@ class AddUserController extends Controller
     {
         $userName = $user->name;
         $user->delete();
+
+        // Catat riwayat penghapusan user
+        AssetHistory::create([
+            'user_id' => auth()->id(),
+            'action' => 'HAPUS',
+            'description' => "Menghapus pengguna: {$userName}.",
+        ]);
 
         return redirect()->route('manage-user')->with('success', "Pengguna {$userName} berhasil dihapus.");
     }
@@ -184,6 +204,15 @@ class AddUserController extends Controller
             }
         }
 
+        // Catat riwayat import user JIKA ada data yang berhasil masuk
+        if ($successCount > 0) {
+            AssetHistory::create([
+                'user_id' => auth()->id(),
+                'action' => 'TAMBAH',
+                'description' => "Melakukan impor massal daftar pengguna ({$successCount} akun berhasil).",
+            ]);
+        }
+
         $message = "Berhasil mengimpor {$successCount} data User.";
         if (count($skippedReasons) > 0) {
             session()->flash('import_skipped_reasons', $skippedReasons);
@@ -197,7 +226,7 @@ class AddUserController extends Controller
         $zip = new \ZipArchive;
         if ($zip->open($filePath) === true) {
             $sharedStrings = [];
-            
+
             if (($ssXml = $zip->getFromName('xl/sharedStrings.xml')) !== false) {
                 $ss = simplexml_load_string($ssXml);
                 foreach ($ss->si as $val) {
@@ -216,10 +245,10 @@ class AddUserController extends Controller
                 $zip->close();
                 return [];
             }
-            
+
             $sheet1 = simplexml_load_string($sheet1Xml);
             $rows = [];
-            
+
             foreach ($sheet1->sheetData->row as $row) {
                 $rowData = [];
                 foreach ($row->c as $c) {
@@ -230,7 +259,7 @@ class AddUserController extends Controller
                         $colIndex = $colIndex * 26 + (ord($colAlpha[$i]) - 64);
                     }
                     $colIndex -= 1;
-                    
+
                     $val = (string)$c->v;
                     if (isset($c['t']) && (string)$c['t'] == 's') {
                         $val = $sharedStrings[(int)$val] ?? '';
@@ -239,7 +268,7 @@ class AddUserController extends Controller
                     }
                     $rowData[$colIndex] = trim($val);
                 }
-                
+
                 $maxKey = empty($rowData) ? -1 : max(array_keys($rowData));
                 $normalizedRow = [];
                 for ($i = 0; $i <= $maxKey; $i++) {

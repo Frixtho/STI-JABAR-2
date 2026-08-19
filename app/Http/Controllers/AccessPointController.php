@@ -53,7 +53,7 @@ class AccessPointController extends Controller
             ->orderBy('lokasi_aset_saat_ini')
             ->pluck('lokasi_aset_saat_ini');
 
-        return view('manageAccessPoint', compact(
+        return view('assets.accesspoint.index', compact(
             'accessPoints',
             'lokasi'
         ));
@@ -61,14 +61,14 @@ class AccessPointController extends Controller
 
     public function create()
     {
-        return view('accessPointForm', [
+        return view('assets.accesspoint.form', [
             'asset' => null,
         ]);
     }
 
     public function importForm()
     {
-        return view('accessPointImport'); // Sesuaikan nama view blade anda
+        return view('assets.accesspoint.import'); // Sesuaikan nama view blade anda
     }
 
     // Memproses file Excel / CSV yang di-upload
@@ -258,7 +258,7 @@ class AccessPointController extends Controller
 
     public function edit(AccessPoint $accessPoint)
     {
-        return view('accessPointForm', [
+        return view('assets.accesspoint.form', [
             'asset' => $accessPoint,
         ]);
     }

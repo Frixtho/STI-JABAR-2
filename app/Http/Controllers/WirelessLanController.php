@@ -32,13 +32,13 @@ class WirelessLanController extends Controller
         $wlcList = $query->orderBy('id_aset')->paginate(15)->withQueryString();
         $lokasi = WirelessLan::select('lokasi_aset_saat_ini')->distinct()->orderBy('lokasi_aset_saat_ini')->pluck('lokasi_aset_saat_ini');
 
-        return view('manageWirelessLAN', compact('wlcList', 'lokasi'));
+        return view('assets.wirelesslan.index', compact('wlcList', 'lokasi'));
     }
 
     public function create()
     {
         $asset = null;
-        return view('wirelessLanForm', compact('asset'));
+        return view('assets.wirelesslan.form', compact('asset'));
     }
 
     public function store(Request $request)
@@ -63,7 +63,7 @@ class WirelessLanController extends Controller
     public function edit(WirelessLan $wirelessLan)
     {
         $asset = $wirelessLan;
-        return view('wirelessLanForm', compact('asset'));
+        return view('assets.wirelesslan.form', compact('asset'));
     }
 
     public function update(Request $request, WirelessLan $wirelessLan)
@@ -102,7 +102,7 @@ class WirelessLanController extends Controller
 
     public function importForm()
     {
-        return view('wirelessLanImport');
+        return view('assets.wirelesslan.import');
     }
 
     public function importStore(Request $request)

@@ -63,7 +63,7 @@ class FirewallController extends Controller
             ->orderBy('lokasi_aset_saat_ini')
             ->pluck('lokasi_aset_saat_ini');
 
-        return view('manageFirewall', compact('firewalls', 'lokasiList'));
+        return view('assets.firewall.index', compact('firewalls', 'lokasiList'));
     }
 
     /**
@@ -72,7 +72,7 @@ class FirewallController extends Controller
     public function create()
     {
         $asset = null; 
-        return view('firewallForm', compact('asset'));
+        return view('assets.firewall.form', compact('asset'));
     }
 
     /**
@@ -80,7 +80,7 @@ class FirewallController extends Controller
      */
     public function importForm()
     {
-        return view('firewallImport'); 
+        return view('assets.firewall.import'); 
     }
 
     /**
@@ -253,7 +253,7 @@ class FirewallController extends Controller
     {
         $asset = Firewall::findOrFail($id); 
 
-        return view('firewallForm', compact('asset'));
+        return view('assets.firewall.form', compact('asset'));
     }
 
     /**

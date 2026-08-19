@@ -32,13 +32,13 @@ class ServerStorageController extends Controller
         $servers = $query->orderBy('id_aset')->paginate(15)->withQueryString();
         $lokasi = ServerStorage::select('lokasi_aset_saat_ini')->distinct()->orderBy('lokasi_aset_saat_ini')->pluck('lokasi_aset_saat_ini');
 
-        return view('manageServerStorage', compact('servers', 'lokasi'));
+        return view('assets.serverstorage.index', compact('servers', 'lokasi'));
     }
 
     public function create()
     {
         $asset = null;
-        return view('serverStorageForm', compact('asset'));
+        return view('assets.serverstorage.form', compact('asset'));
     }
 
     public function store(Request $request)
@@ -63,7 +63,7 @@ class ServerStorageController extends Controller
     public function edit(ServerStorage $serverStorage)
     {
         $asset = $serverStorage;
-        return view('serverStorageForm', compact('asset'));
+        return view('assets.serverstorage.form', compact('asset'));
     }
 
     public function update(Request $request, ServerStorage $serverStorage)
@@ -102,7 +102,7 @@ class ServerStorageController extends Controller
 
     public function importForm()
     {
-        return view('serverStorageImport');
+        return view('assets.serverstorage.import');
     }
 
     public function importStore(Request $request)

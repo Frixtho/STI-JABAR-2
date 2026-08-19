@@ -31,13 +31,13 @@ class UpsController extends Controller
         $upsList = $query->orderBy('id_aset')->paginate(15)->withQueryString();
         $lokasi = Ups::select('lokasi_aset_saat_ini')->distinct()->orderBy('lokasi_aset_saat_ini')->pluck('lokasi_aset_saat_ini');
 
-        return view('manageUps', compact('upsList', 'lokasi'));
+        return view('assets.ups.index', compact('upsList', 'lokasi'));
     }
 
     public function create()
     {
         $asset = null;
-        return view('upsForm', compact('asset'));
+        return view('assets.ups.form', compact('asset'));
     }
 
     public function store(Request $request)
@@ -62,7 +62,7 @@ class UpsController extends Controller
     public function edit(Ups $ups)
     {
         $asset = $ups;
-        return view('upsForm', compact('asset'));
+        return view('assets.ups.form', compact('asset'));
     }
 
     public function update(Request $request, Ups $ups)
@@ -101,7 +101,7 @@ class UpsController extends Controller
 
     public function importForm()
     {
-        return view('upsImport');
+        return view('assets.ups.import');
     }
 
     public function importStore(Request $request)

@@ -32,13 +32,13 @@ class ModemController extends Controller
 
         $lokasi = Modem::select('lokasi_aset_saat_ini')->distinct()->orderBy('lokasi_aset_saat_ini')->pluck('lokasi_aset_saat_ini');
 
-        return view('manageModem', compact('modems', 'lokasi'));
+        return view('assets.modem.index', compact('modems', 'lokasi'));
     }
 
     public function create()
     {
         $asset = null;
-        return view('modemForm', compact('asset'));
+        return view('assets.modem.form', compact('asset'));
     }
 
     public function store(Request $request)
@@ -82,7 +82,7 @@ class ModemController extends Controller
     public function edit(Modem $modem)
     {
         $asset = $modem;
-        return view('modemForm', compact('asset'));
+        return view('assets.modem.form', compact('asset'));
     }
 
     public function update(Request $request, Modem $modem)
@@ -135,7 +135,7 @@ class ModemController extends Controller
 
     public function importForm()
     {
-        return view('modemImport');
+        return view('assets.modem.import');
     }
 
     public function importStore(Request $request)

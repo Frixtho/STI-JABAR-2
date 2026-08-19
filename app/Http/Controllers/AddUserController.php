@@ -33,12 +33,12 @@ class AddUserController extends Controller
 
         $users = $query->paginate(10)->withQueryString();
 
-        return view('manageUser', compact('users'));
+        return view('users.index', compact('users'));
     }
     
     public function create()
     {
-        return view('addUser'); 
+        return view('users.form'); 
     }
 
     public function store(Request $request)
@@ -69,7 +69,7 @@ class AddUserController extends Controller
 
     public function edit(User $user)
     {
-        return view('addUser', compact('user'));
+        return view('users.form', compact('user'));
     }
 
     public function update(Request $request, User $user)
@@ -119,7 +119,7 @@ class AddUserController extends Controller
 
     public function importForm()
     {
-        return view('userImport');
+        return view('users.import');
     }
 
     public function importStore(Request $request)

@@ -67,7 +67,7 @@ class UnitController extends Controller
             })
             ->paginate(20);
 
-        return view('manageUnit', compact('units'));
+        return view('units.index', compact('units'));
     }
 
     public function create(Request $request)
@@ -75,7 +75,7 @@ class UnitController extends Controller
         $parents = Unit::orderBy('level')->orderBy('name')->get();
         $selectedLevel = $request->query('level', 1);
 
-        return view('unitForm', [
+        return view('units.form', [
             'unit' => null,
             'parents' => $parents,
             'selectedLevel' => $selectedLevel,
@@ -105,7 +105,7 @@ class UnitController extends Controller
         // Level 4 butuh parent Level 3, Level 3 butuh parent Level 2, Level 2 butuh parent Level 1
         $parentUnits = Unit::where('level', '<', $unit->level)->get();
 
-        return view('unitForm', compact('unit', 'parentUnits'));
+        return view('units.form', compact('unit', 'parentUnits'));
     }
 
     public function update(Request $request, Unit $unit)
@@ -180,7 +180,7 @@ class UnitController extends Controller
         $upts = \App\Models\Unit::where('level', 2)->orderBy('name')->get();
 
         // Ubah dari 'unit.import' menjadi 'manage-unit.import'
-        return view('unitImport', compact('upts'));
+        return view('units.import', compact('upts'));
     }
     /**
      * Terima file + jenis data (+ opsional UPT default kalau CSV tidak

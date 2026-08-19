@@ -32,13 +32,13 @@ class ServerFisikController extends Controller
         $servers = $query->orderBy('id_aset')->paginate(15)->withQueryString();
         $lokasi = ServerFisik::select('lokasi_aset_saat_ini')->distinct()->orderBy('lokasi_aset_saat_ini')->pluck('lokasi_aset_saat_ini');
 
-        return view('manageServerFisik', compact('servers', 'lokasi'));
+        return view('assets.serverfisik.index', compact('servers', 'lokasi'));
     }
 
     public function create()
     {
         $asset = null;
-        return view('serverFisikForm', compact('asset'));
+        return view('assets.serverfisik.form', compact('asset'));
     }
 
     public function store(Request $request)
@@ -63,7 +63,7 @@ class ServerFisikController extends Controller
     public function edit(ServerFisik $serverFisik)
     {
         $asset = $serverFisik;
-        return view('serverFisikForm', compact('asset'));
+        return view('assets.serverfisik.form', compact('asset'));
     }
 
     public function update(Request $request, ServerFisik $serverFisik)
@@ -102,7 +102,7 @@ class ServerFisikController extends Controller
 
     public function importForm()
     {
-        return view('serverFisikImport');
+        return view('assets.serverfisik.import');
     }
 
     public function importStore(Request $request)

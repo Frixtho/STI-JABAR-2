@@ -32,13 +32,13 @@ class ServerBaremetalController extends Controller
         $servers = $query->orderBy('id_aset')->paginate(15)->withQueryString();
         $lokasi = ServerBaremetal::select('lokasi_aset_saat_ini')->distinct()->orderBy('lokasi_aset_saat_ini')->pluck('lokasi_aset_saat_ini');
 
-        return view('manageServerBaremetal', compact('servers', 'lokasi'));
+        return view('assets.serverbaremetal.index', compact('servers', 'lokasi'));
     }
 
     public function create()
     {
         $asset = null;
-        return view('serverBaremetalForm', compact('asset'));
+        return view('assets.serverbaremetal.form', compact('asset'));
     }
 
     public function store(Request $request)
@@ -94,7 +94,7 @@ class ServerBaremetalController extends Controller
     public function edit(ServerBaremetal $server)
     {
         $asset = $server;
-        return view('serverBaremetalForm', compact('asset'));
+        return view('assets.serverbaremetal.form', compact('asset'));
     }
 
     public function update(Request $request, ServerBaremetal $server)
@@ -164,7 +164,7 @@ class ServerBaremetalController extends Controller
 
     public function importForm()
     {
-        return view('serverBaremetalImport');
+        return view('assets.serverbaremetal.import');
     }
 
     public function importStore(Request $request)

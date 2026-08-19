@@ -62,7 +62,7 @@ class RouterController extends Controller
             ->orderBy('lokasi_aset_saat_ini')
             ->pluck('lokasi_aset_saat_ini');
 
-        return view('manageRouter', compact(
+        return view('assets.router.index', compact(
             'routers',
             'lokasiList'
         ));
@@ -76,12 +76,12 @@ class RouterController extends Controller
     {
         $router = null;
 
-        return view('routerForm', compact('router'));
+        return view('assets.router.form', compact('router'));
     }
 
     public function importForm()
     {
-        return view('routerImport'); // Sesuaikan path view Anda jika berbeda
+        return view('assets.router.import'); // Sesuaikan path view Anda jika berbeda
     }
 
     /**
@@ -258,7 +258,7 @@ class RouterController extends Controller
     {
         $router = Router::findOrFail($id);
 
-        return view('routerForm', compact('router'));
+        return view('assets.router.form', compact('router'));
     }
 
 

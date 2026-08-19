@@ -70,7 +70,8 @@ class AssetController extends Controller
             $line->gi_akhir_name = isset($line->gi_akhir_id) ? optional(Unit::find($line->gi_akhir_id))->name : null;
         }
 
-        return view('manageAsset', [
+        // PERBAIKAN PATH VIEW: assets/tower/index.blade.php
+        return view('assets.tower.index', [
             'assets' => $assets,
             'teganganOptions' => self::TEGANGAN_OPTIONS,
             'selectedTegangan' => $tegangan,
@@ -86,7 +87,14 @@ class AssetController extends Controller
                     ->paginate(20)
                     ->withQueryString();
 
-        return view('manageAsset', [
+        // MENGARAH KE FOLDER assets/tower ATAU assets/accesspoint
+        $viewName = match($currentCategory->slug) {
+            'tower' => 'assets.tower.index',          
+            'access-point' => 'assets.accesspoint.index', 
+            default => 'assets.tower.index',          
+        };
+
+        return view($viewName, [
             'assets' => $assets,
             'currentCategory' => $currentCategory,
         ]);
@@ -98,7 +106,8 @@ class AssetController extends Controller
         $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
         $asset = null;
 
-        return view('assetForm', compact('upts', 'garduInduks', 'asset'));
+        // PERBAIKAN PATH VIEW: assets/tower/assetForm.blade.php
+        return view('assets.tower.assetForm', compact('upts', 'garduInduks', 'asset'));
     }
 
     public function store(Request $request)
@@ -141,7 +150,8 @@ class AssetController extends Controller
         $upts = Unit::where('level', 2)->orderBy('name')->get();
         $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
 
-        return view('assetForm', compact('upts', 'garduInduks', 'asset'));
+        // PERBAIKAN PATH VIEW: assets/tower/assetForm.blade.php
+        return view('assets.tower.assetForm', compact('upts', 'garduInduks', 'asset'));
     }
 
     public function update(Request $request, Asset $asset)
@@ -163,10 +173,6 @@ class AssetController extends Controller
     {
         $assetName = $asset->name;
         $assetId = $asset->id;
-
-        // Jika Anda mengatur foreign key constraint dengan ON DELETE CASCADE di database, 
-        // sutt_towers akan otomatis terhapus. Jika tidak, aktifkan baris di bawah ini:
-        // SuttTower::where('sutt_line_id', $assetId)->delete();
 
         $asset->delete();
 
@@ -197,33 +203,24 @@ class AssetController extends Controller
     // 2. MANAGE TOWER (FILE BASED IMPORT & DETAIL)
     // =========================================================================
 
-    /**
-     * Menampilkan daftar File CSV (Jalur SUTT) yang telah diunggah.
-     */
     public function indexTower(Request $request)
     {
-        // 1. Baca data langsung dari Model Asset dengan kategori 'sutt' (bukan sutt_lines)
         $query = Asset::where('category', 'sutt');
 
         if ($search = $request->query('search')) {
             $query->where('name', 'ILIKE', "%{$search}%");
         }
 
-        // 2. Simpan di variabel $assets agar sesuai dengan foreach di manageAsset.blade.php
         $assets = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
 
         $currentCategory = (object) ['name' => 'Tower', 'slug' => 'tower'];
 
-        // 3. Return ke view manageAsset
-        return view('manageAsset', compact('assets', 'currentCategory'));
+        // PERBAIKAN PATH VIEW: assets/tower/index.blade.php
+        return view('assets.tower.index', compact('assets', 'currentCategory'));
     }
 
-    /**
-     * Menampilkan isi rincian Tower di dalam satu File / Jalur SUTT
-     */
     public function show($id, Request $request)
     {
-        // Ganti dari DB::table('sutt_lines') menjadi Asset::
         $line = Asset::where('id', $id)->first();
 
         if (!$line) {
@@ -262,7 +259,8 @@ class AssetController extends Controller
             $t->jarak_antar_tower = $matched ? $matched->jarak_antar_tower : null;
         }
 
-        return view('assetShow', [
+        // PERBAIKAN PATH VIEW: assets/tower/show.blade.php (Pastikan nama filenya show.blade.php)
+        return view('assets.tower.show', [
             'line' => $line,
             'towers' => $towers,
             'totalTowers' => $allTowersOrdered->count(),
@@ -272,12 +270,10 @@ class AssetController extends Controller
 
     public function importForm()
     {
-        return view('assetImport');
+        // PERBAIKAN PATH VIEW: assets/tower/import.blade.php
+        return view('assets.tower.import');
     }
 
-    /**
-     * Proses Import Multiple CSV File
-     */
     public function import(Request $request)
     {
         $request->validate([
@@ -295,7 +291,6 @@ class AssetController extends Controller
             $defaultUpt = Unit::where('level', 2)->first();
             $defaultUptId = $defaultUpt ? $defaultUpt->id : null;
 
-            // 1. Buat Jalur Utama di Tabel assets
             $assetLine = Asset::create([
                 'name'         => $originalName,
                 'category'     => 'sutt',
@@ -308,7 +303,6 @@ class AssetController extends Controller
             
             $lineId = $assetLine->id;
 
-            // Sinkronisasi ke sutt_lines (jika tabel sutt_lines wajib ada)
             try {
                 if (!DB::table('sutt_lines')->where('id', $lineId)->exists()) {
                     DB::table('sutt_lines')->insert([
@@ -320,7 +314,6 @@ class AssetController extends Controller
                 }
             } catch (\Exception $e) {}
 
-            // 2. Buka dan Baca File CSV
             $handle = fopen($file->getRealPath(), 'r');
             if (!$handle) continue;
 
@@ -331,13 +324,11 @@ class AssetController extends Controller
             $rowIndex = 0;
             $towersToInsert = [];
             
-            // Buat counter buatan sendiri agar tower_number selalu unik, berurutan, dan 100% INTEGER
             $autoIncrementTowerId = 1; 
 
             while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
                 $rowIndex++;
                 
-                // Lewati header
                 if ($rowIndex == 1) continue;
                 if (empty($row) || count($row) < 3) continue;
 
@@ -351,7 +342,7 @@ class AssetController extends Controller
 
                 $towersToInsert[] = [
                     'sutt_line_id' => $lineId,
-                    'tower_number' => $autoIncrementTowerId, // Menggunakan angka urut 1, 2, 3... berapapun panjang CSV-nya
+                    'tower_number' => $autoIncrementTowerId, 
                     'functloc'     => $functloc,
                     'name'         => $nama,
                     'latitude'     => $lat,
@@ -360,13 +351,11 @@ class AssetController extends Controller
                     'updated_at'   => now(),
                 ];
                 
-                // Naikkan angka untuk baris berikutnya
                 $autoIncrementTowerId++; 
             }
             fclose($handle);
 
             if (count($towersToInsert) > 0) {
-                // Insert ke database
                 foreach (array_chunk($towersToInsert, 500) as $chunk) {
                     SuttTower::insertOrIgnore($chunk);
                 }
@@ -393,7 +382,8 @@ class AssetController extends Controller
         $tower = SuttTower::findOrFail($towerId);
         $line = DB::table('sutt_lines')->where('id', $tower->sutt_line_id)->first();
 
-        return view('towerForm', compact('tower', 'line'));
+        // PERBAIKAN PATH VIEW: assets/tower/form.blade.php
+        return view('assets.tower.form', compact('tower', 'line'));
     }
 
     public function updateTower(Request $request, $towerId)
@@ -418,7 +408,7 @@ class AssetController extends Controller
             'description' => 'Memperbarui data titik tower: ' . $tower->name,
         ]);
 
-        return redirect()->route('manage-tower.show', $tower->sutt_line_id)
+        return redirect()->route('manage-asset.show', $tower->sutt_line_id)
             ->with('success', 'Data tower berhasil diperbarui.');
     }
 
@@ -439,7 +429,7 @@ class AssetController extends Controller
             'description' => 'Menghapus titik tower: ' . $towerName,
         ]);
 
-        return redirect()->route('manage-tower.show', $lineId)
+        return redirect()->route('manage-asset.show', $lineId)
             ->with('success', 'Tower berhasil dihapus.');
     }
 
@@ -449,14 +439,11 @@ class AssetController extends Controller
         $jumlahTower = SuttTower::where('sutt_line_id', $lineId)->count();
 
         try {
-            // Gunakan Model Asset agar pasti menargetkan tabel utama (assets)
             Asset::where('id', $lineId)->update([
                 'panjang_km' => $panjang,
                 'jumlah_tower' => $jumlahTower,
             ]);
-        } catch (\Exception $e) {
-            //
-        }
+        } catch (\Exception $e) {}
     }
 
     public function hitungPanjangJalurSUTT($assetId)
@@ -484,7 +471,7 @@ class AssetController extends Controller
     {
         if (!$latitudeFrom || !$longitudeFrom || !$latitudeTo || !$longitudeTo) return null;
 
-        $earthRadius = 6371; // Radius bumi dalam KM
+        $earthRadius = 6371; 
 
         $latFrom = deg2rad((float)$latitudeFrom);
         $lonFrom = deg2rad((float)$longitudeFrom);
@@ -500,11 +487,11 @@ class AssetController extends Controller
 
         $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
-        return $earthRadius * $c; // Nilai Kembali berupa KM
+        return $earthRadius * $c; 
     }
 
     // =========================================================================
-    // 3. ASSET HISTORY & EXPORT (DISATUKAN)
+    // 3. ASSET HISTORY & EXPORT
     // =========================================================================
 
     public function history(Request $request)
@@ -522,6 +509,7 @@ class AssetController extends Controller
 
         $histories = $query->paginate(15)->withQueryString();
 
+        // Berdasarkan struktur Anda, file assetHistory.blade.php ada langsung di dalam resources/views
         return view('assetHistory', compact('histories'));
     }
 

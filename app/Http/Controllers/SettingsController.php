@@ -29,7 +29,7 @@ class SettingsController extends Controller
                 ];
             });
 
-        return view('settings', compact('sessions')); // Pastikan nama view sesuai ('settings' atau nama file Anda)
+        return view('settings.index', compact('sessions')); // Pastikan nama view sesuai ('settings' atau nama file Anda)
     }
 
     private function parseUserAgent($userAgent)

@@ -36,7 +36,7 @@ class ManageUserController extends Controller
         // Pagination dengan mempertahankan parameter query agar filter tidak hilang saat pindah halaman
         $users = $query->orderBy('id', 'DESC')->paginate(7)->withQueryString();
 
-        return view('manageUser', compact('users'));
+        return view('users.index', compact('users'));
     }
 
     public function edit($id)
@@ -48,7 +48,7 @@ class ManageUserController extends Controller
 
         $user = User::findOrFail($id);
 
-        return view('addUser', compact('user'));
+        return view('users.form', compact('user'));
     }
 
     public function update(Request $request, $id)

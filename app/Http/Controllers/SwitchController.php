@@ -61,7 +61,7 @@ class SwitchController extends Controller
             ->orderBy('lokasi_aset_saat_ini')
             ->pluck('lokasi_aset_saat_ini');
 
-        return view('manageSwitch', compact(
+        return view('assets.switch.index', compact(
             'switches',
             'lokasiList'
         ));
@@ -69,7 +69,7 @@ class SwitchController extends Controller
 
     public function ImportForm()
     {
-        return view('switchImport'); 
+        return view('assets.switch.import'); 
     }
 
     /**
@@ -246,7 +246,7 @@ class SwitchController extends Controller
     {
         $switch = null;
 
-        return view('switchForm', compact('switch'));
+        return view('assets.switch.form', compact('switch'));
     }
 
 
@@ -296,7 +296,7 @@ class SwitchController extends Controller
     {
         $switch = Switche::findOrFail($id);
 
-        return view('switchForm', compact('switch'));
+        return view('assets.switch.form', compact('switch'));
     }
 
 

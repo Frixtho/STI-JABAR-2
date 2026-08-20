@@ -142,4 +142,34 @@ class AssetCategoryController extends Controller
 
         return redirect()->route('manage-category')->with('success', 'Pengaturan akses submenu per unit berhasil diperbarui!');
     }
+
+    // Fungsi untuk memproses edit kolom form
+    public function fieldsUpdate(Request $request, $fieldId)
+    {
+        $field = \App\Models\AssetCategoryField::findOrFail($fieldId);
+        
+        $field->update([
+            'name' => $request->name, // Nama / Label Kolom
+            'field_type' => $request->field_type, // Teks, Angka, Tanggal, atau Dropdown
+            'options' => $request->options, // Pilihan dropdown (jika ada)
+            'is_required' => $request->has('is_required'), // Centang Wajib Diisi
+            'show_in_table' => $request->has('show_in_table'), // Centang Tampil di Tabel
+        ]);
+
+        return back()->with('success', 'Spesifikasi kolom berhasil diperbarui.');
+    }
+
+    public function toggleShowInTable($fieldId)
+    {
+        $field = \App\Models\AssetCategoryField::findOrFail($fieldId);
+        
+        // Cara langsung ini kebal dari error $fillable Mass Assignment
+        $field->show_in_table = !$field->show_in_table;
+        $field->save();
+
+        return response()->json([
+            'success' => true, 
+            'show_in_table' => $field->show_in_table
+        ]);
+    }
 }

@@ -95,7 +95,7 @@
                 
                 @php
                     // Ambil field-field yang diatur 'show_in_table' = true
-                    $tableColumns = $currentCategory->fields->where('show_in_table', true)->take(6);
+                    $tableColumns = $currentCategory->fields->where('show_in_table', true);
                 @endphp
 
                 {{-- Wadah khusus tabel yang memiliki scrollbar horizontal --}}

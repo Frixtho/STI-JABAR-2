@@ -29,6 +29,8 @@ Route::prefix('manage-category')->group(function () {
     Route::delete('/fields/{fieldId}', [AssetCategoryController::class, 'fieldsDestroy'])->name('manage-category.fields.destroy');
     Route::get('/{id}/unit-settings', [AssetCategoryController::class, 'unitSettings'])->name('manage-category.unit-settings');
     Route::patch('/{id}/unit-settings', [AssetCategoryController::class, 'saveUnitSettings'])->name('manage-category.unit-settings.save');
+    Route::patch('/fields/{fieldId}/update', [AssetCategoryController::class, 'fieldsUpdate'])->name('manage-category.fields.update');
+    Route::patch('/fields/{fieldId}/toggle-table', [AssetCategoryController::class, 'toggleShowInTable'])->name('manage-category.fields.toggle-table');
 });
 
 Route::middleware('guest')->group(function () {

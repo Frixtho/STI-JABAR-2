@@ -435,21 +435,41 @@ class AssetController extends Controller
         $totalCreated = 0;
         $defaultUptId = Unit::where('level', 2)->first()->id ?? 1;
 
-        // DAFTAR ATRIBUT UMUM (Nama Header CSV yang akan masuk ke kolom utama tabel 'assets', bukan ke JSON)
-        // Anda bisa menyesuaikan atau menambah alias nama header di sini
-        $commonFieldsMap = [
+        /*
+        |--------------------------------------------------------------------------
+        | KAMUS KATA KUNCI (Fuzzy Match)
+        |--------------------------------------------------------------------------
+        | Urutkan dari frasa yang paling spesifik/panjang ke yang paling pendek!
+        | Sistem akan mengecek apakah header CSV mengandung salah satu kata di bawah ini.
+        */
+        $commonKeywords = [
+            'ket. status kepemilikan' => 'ownership_desc',
+            'keterangan status kepemilikan' => 'ownership_desc',
+            'status kepemilikan' => 'ownership_status',
+            'kepemilikan' => 'ownership_status',
+            'keterangan lokasi' => 'location_desc',
+            'lokasi aset saat ini' => 'unit_name', 
+            'lokasi' => 'location_desc',
             'id aset' => 'asset_id',
             'asset id' => 'asset_id',
-            'nama' => 'name',
             'nama aset' => 'name',
+            'nama vendor' => 'ownership_desc',
+            'nama' => 'name',
+            'perolehan' => 'acquisition_date',
+            'mulai aktif' => 'acquisition_date',
+            'kondisi' => 'condition_status',
+            'operasional' => 'operational_status',
+            'kritikalitas' => 'criticality_level',
+            'keamanan' => 'security_classification',
+            'pemeriksaan' => 'last_maintenance_date',
+            'deskripsi' => 'description',
+            'peran aset' => 'description',
+            'bidang pencatat' => 'pic_department',
+            'bidang' => 'pic_department',
+            'pic pencatat' => 'pic',
+            'pic' => 'pic',
             'unit' => 'unit_name',
             'departemen' => 'unit_name',
-            'status kondisi' => 'condition_status',
-            'kondisi' => 'condition_status',
-            'status operasional' => 'operational_status',
-            'operasional' => 'operational_status',
-            'pic' => 'pic',
-            'pic pencatat' => 'pic',
         ];
 
         foreach ($request->file('files') as $file) {
@@ -463,45 +483,56 @@ class AssetController extends Controller
             $headers = fgetcsv($handle, 0, $delimiter);
             if (!$headers) continue;
 
-            // Bersihkan nama header dari spasi berlebih atau karakter aneh
+            // Bersihkan nama header dari spasi berlebih atau karakter gaib
             $headers = array_map(function($val) {
                 return trim(preg_replace('/[\x00-\x1F\x7F-\xFF]/', '', $val)); 
             }, $headers);
 
-            // 2. AUTO-SCHEMA DISCOVERY (Bikin Form Otomatis dari Header CSV)
+            // 2. AUTO-SCHEMA DISCOVERY & MAPPING KATA KUNCI
             $dynamicKeys = [];
+            $headerMapping = []; // Menyimpan peta "Kolom ini masuk ke DB mana?"
+
             foreach ($headers as $index => $headerName) {
                 if (empty($headerName)) continue;
 
                 $headerLower = strtolower($headerName);
-                
-                // Cek apakah header ini bagian dari Atribut Umum? Jika ya, lewati.
-                if (array_key_exists($headerLower, $commonFieldsMap)) {
-                    continue; 
+                $matchedDbColumn = null;
+
+                // Loop kamus untuk mengecek apakah kata kunci ada di dalam header CSV
+                foreach ($commonKeywords as $keyword => $dbCol) {
+                    if (\Illuminate\Support\Str::contains($headerLower, $keyword)) {
+                        $matchedDbColumn = $dbCol;
+                        break; // Stop di kecocokan pertama
+                    }
                 }
 
-                // Jika bukan atribut umum, ini adalah ATRIBUT SPESIFIK (Dinamis).
-                // Buat key yang aman untuk JSON (contoh: "IP Address" jadi "ip_address")
-                $fieldKey = \Illuminate\Support\Str::slug($headerName, '_');
-                $dynamicKeys[$index] = $fieldKey;
+                if ($matchedDbColumn) {
+                    // Jika cocok, tandai index ini sebagai ATRIBUT UMUM
+                    $headerMapping[$index] = ['type' => 'common', 'key' => $matchedDbColumn];
+                } else {
+                    // Jika tidak ada kata kunci yang cocok, berarti ini ATRIBUT SPESIFIK (Dinamis)
+                    $fieldKey = \Illuminate\Support\Str::slug($headerName, '_');
+                    $dynamicKeys[$index] = $fieldKey;
+                    $headerMapping[$index] = ['type' => 'dynamic', 'key' => $fieldKey];
 
-               // AUTO-CREATE FORM FIELD JIKA BELUM ADA DI DATABASE
-                \App\Models\AssetCategoryField::firstOrCreate(
-                    [
-                        'asset_category_id' => $currentCategory->id,
-                        'field_key' => $fieldKey,
-                    ],
-                    [
-                        'name' => ucwords(str_replace('_', ' ', $headerName)), // <-- Sudah disesuaikan dengan DB
-                        'field_type' => 'text', 
-                        'is_required' => false,
-                        'show_in_table' => true,
-                        'group_name' => 'ATRIBUT SPESIFIK', // Agar masuk ke dalam grup form yang rapi
-                    ]
-                );
+                    // Buat Form Dinamisnya secara otomatis
+                    \App\Models\AssetCategoryField::firstOrCreate(
+                        [
+                            'asset_category_id' => $currentCategory->id,
+                            'field_key' => $fieldKey,
+                        ],
+                        [
+                            'name' => ucwords(str_replace('_', ' ', $headerName)),
+                            'field_type' => 'text', 
+                            'is_required' => false,
+                            'show_in_table' => true,
+                            'group_name' => 'ATRIBUT SPESIFIK',
+                        ]
+                    );
+                }
             }
 
-            // 3. BACA DATA BARIS DEMI BARIS
+            // 3. BACA DATA BARIS DEMI BARIS LALU MASUKKAN SESUAI MAPPING
             while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
                 if (empty($row) || count($row) < 1) continue;
 
@@ -514,25 +545,26 @@ class AssetController extends Controller
                 ];
                 $specifications = [];
 
-                // Mapping isi baris ke header
                 foreach ($headers as $index => $headerName) {
                     $val = trim($row[$index] ?? '');
-                    $headerLower = strtolower($headerName);
+                    if (empty($val) || !isset($headerMapping[$index])) continue;
 
-                    // Jika ini atribut umum, masukkan ke kolom utama
-                    if (array_key_exists($headerLower, $commonFieldsMap)) {
-                        $dbColumn = $commonFieldsMap[$headerLower];
-                        if (!empty($val)) {
-                            $assetData[$dbColumn] = $val;
+                    $mapInfo = $headerMapping[$index];
+
+                    if ($mapInfo['type'] === 'common') {
+                        // Khusus untuk format Tanggal (Ubah teks ke format Date DB)
+                        if (in_array($mapInfo['key'], ['acquisition_date', 'last_maintenance_date']) && strtotime($val)) {
+                            $assetData[$mapInfo['key']] = date('Y-m-d', strtotime($val));
+                        } else {
+                            $assetData[$mapInfo['key']] = $val;
                         }
-                    } 
-                    // Jika ini atribut spesifik, masukkan ke JSON
-                    else if (isset($dynamicKeys[$index])) {
-                        $specifications[$dynamicKeys[$index]] = $val;
+                    } else {
+                        // Masukkan ke format JSON Spesifikasi Dinamis
+                        $specifications[$mapInfo['key']] = $val;
                     }
                 }
 
-                // Pastikan ID Aset dan Nama tidak kosong
+                // Validasi data kosong untuk field Wajib
                 if (empty($assetData['asset_id'])) {
                     $assetData['asset_id'] = strtoupper($currentCategory->slug) . '-' . strtoupper(\Illuminate\Support\Str::random(6));
                 }
@@ -558,7 +590,7 @@ class AssetController extends Controller
             ]);
         }
 
-        return redirect()->route('manage-asset.generic.index', $categorySlug)->with('success', "{$totalCreated} data {$currentCategory->name} berhasil diimpor & form otomatis disesuaikan.");
+        return redirect()->route('manage-asset.generic.index', $categorySlug)->with('success', "{$totalCreated} data {$currentCategory->name} berhasil diimpor & form disesuaikan.");
     }
 
     /*

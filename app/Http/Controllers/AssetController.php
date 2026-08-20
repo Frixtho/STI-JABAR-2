@@ -11,197 +11,16 @@ use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Response;
 
 class AssetController extends Controller
 {
-    private const FIELD_ALIASES = [
-        'generic' => [
-            'name' => ['nama', 'name', 'nama_asset', 'nama aset'],
-            'category' => ['category', 'kategori', 'jenis', 'grup', 'group'],
-            'code' => ['functloc', 'code', 'kode', 'no_tiang', 'no_tower'],
-            'gi_awal' => ['gi_awal', 'gardu_induk_awal', 'gi awal', 'from_gi', 'gi1'],
-            'gi_akhir' => ['gi_akhir', 'gardu_induk_akhir', 'gi akhir', 'to_gi', 'gi2'],
-            'latitude' => ['lock lat', 'lock_lat', 'latitude', 'lat'],
-            'longitude' => ['lock lng', 'lock_lng', 'longitude', 'lng'],
-            'wil_kerja' => ['wil. kerja', 'wil kerja', 'wilayah kerja', 'wil_kerja'],
-        ],
-    ];
-
-    private const FIELD_LABELS = [
-        'name' => 'Nama Aset',
-        'category' => 'Kategori',
-        'code' => 'Kode / Functloc',
-        'gi_awal' => 'GI Awal',
-        'gi_akhir' => 'GI Akhir',
-        'latitude' => 'Latitude',
-        'longitude' => 'Longitude',
-    ];
-
     private const TEGANGAN_OPTIONS = ['30', '70', '150', '500'];
 
-    // =========================================================================
-    // 1. MANAGE ASSET UMUM
-    // =========================================================================
-
-    public function index(Request $request)
-    {
-        $query = DB::table('sutt_lines')->orderBy('name');
-
-        if ($search = $request->query('search')) {
-            $query->where('name', 'ILIKE', "%{$search}%");
-        }
-
-        $tegangan = $request->query('tegangan');
-        if ($tegangan && in_array($tegangan, self::TEGANGAN_OPTIONS)) {
-            $query->whereRaw('name ~* ?', ["{$tegangan}\\s*kv"]);
-        }
-
-        $assets = $query->paginate(20)->withQueryString();
-
-        foreach ($assets as $line) {
-            $teganganDinamis = '150 kV';
-            if (preg_match('/(30|70|150|500)\s*kv/i', $line->name, $matchTegangan)) {
-                $teganganDinamis = $matchTegangan[1] . ' kV';
-            }
-            $line->tegangan = $teganganDinamis;
-
-            $line->gi_awal_name = isset($line->gi_awal_id) ? optional(Unit::find($line->gi_awal_id))->name : null;
-            $line->gi_akhir_name = isset($line->gi_akhir_id) ? optional(Unit::find($line->gi_akhir_id))->name : null;
-        }
-
-        // PERBAIKAN PATH VIEW: assets/tower/index.blade.php
-        return view('assets.tower.index', [
-            'assets' => $assets,
-            'teganganOptions' => self::TEGANGAN_OPTIONS,
-            'selectedTegangan' => $tegangan,
-        ]);
-    }
-
-    public function indexByCategory($categorySlug)
-    {
-        $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
-
-        $assets = Asset::where('asset_category_id', $currentCategory->id)
-                    ->orderBy('name')
-                    ->paginate(20)
-                    ->withQueryString();
-
-        // MENGARAH KE FOLDER assets/tower ATAU assets/accesspoint
-        $viewName = match($currentCategory->slug) {
-            'tower' => 'assets.tower.index',          
-            'access-point' => 'assets.accesspoint.index', 
-            default => 'assets.tower.index',          
-        };
-
-        return view($viewName, [
-            'assets' => $assets,
-            'currentCategory' => $currentCategory,
-        ]);
-    }
-
-    public function create(Request $request)
-    {
-        $upts = Unit::where('level', 2)->orderBy('name')->get();
-        $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
-        $asset = null;
-
-        // PERBAIKAN PATH VIEW: assets/tower/assetForm.blade.php
-        return view('assets.tower.assetForm', compact('upts', 'garduInduks', 'asset'));
-    }
-
-    public function store(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'functloc' => 'required|string|max:50',
-            'upt_id' => 'required|exists:units,id',
-            'tegangan' => 'required|string',
-            'gi_awal_id' => 'required|exists:units,id',
-            'gi_akhir_id' => 'required|exists:units,id|different:gi_awal_id',
-            'jumlah_tower' => 'required|integer|min:1',
-            'panjang_km' => 'required|numeric|min:0',
-        ]);
-
-        $asset = Asset::create([
-            'name' => $request->name,
-            'functloc' => $request->functloc,
-            'category' => 'sutt',
-            'upt_id' => $request->upt_id,
-            'tegangan' => $request->tegangan,
-            'gi_awal_id' => $request->gi_awal_id,
-            'gi_akhir_id' => $request->gi_akhir_id,
-            'jumlah_tower' => $request->jumlah_tower,
-            'panjang_km' => $request->panjang_km,
-        ]);
-
-        AssetHistory::create([
-            'asset_id' => $asset->id,
-            'user_id' => auth()->id(),
-            'action' => 'TAMBAH',
-            'description' => 'Menambahkan jalur SUTT baru: ' . $asset->name,
-        ]);
-
-        return redirect()->route('manage-asset')->with('success', 'Jalur SUTT berhasil ditambahkan.');
-    }
-
-    public function edit(Asset $asset)
-    {
-        $upts = Unit::where('level', 2)->orderBy('name')->get();
-        $garduInduks = Unit::where('level', 4)->orderBy('name')->get();
-
-        // PERBAIKAN PATH VIEW: assets/tower/assetForm.blade.php
-        return view('assets.tower.assetForm', compact('upts', 'garduInduks', 'asset'));
-    }
-
-    public function update(Request $request, Asset $asset)
-    {
-        $validated = $this->validateAsset($request, $asset->id);
-        $asset->update($validated);
-
-        AssetHistory::create([
-            'asset_id' => $asset->id,
-            'user_id' => auth()->id(),
-            'action' => 'UBAH',
-            'description' => 'Memperbarui data informasi aset: ' . $asset->name,
-        ]);
-
-        return redirect()->route('manage-asset')->with('success', 'Aset berhasil diperbarui.');
-    }
-
-    public function destroy(Asset $asset)
-    {
-        $assetName = $asset->name;
-        $assetId = $asset->id;
-
-        $asset->delete();
-
-        AssetHistory::create([
-            'asset_id' => $assetId,
-            'user_id' => auth()->id(),
-            'action' => 'HAPUS',
-            'description' => 'Menghapus aset/jalur SUTT (File Tower): ' . $assetName,
-        ]);
-
-        return back()->with('success', 'File dan Data Tower di dalamnya berhasil dihapus.');
-    }
-
-    private function validateAsset(Request $request, ?int $ignoreId = null): array
-    {
-        return $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'code' => ['nullable', 'string', 'max:50'],
-            'gi_awal_id' => ['nullable', 'exists:units,id'],
-            'gi_akhir_id' => ['nullable', 'exists:units,id'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-        ]);
-    }
-
-
-    // =========================================================================
-    // 2. MANAGE TOWER (FILE BASED IMPORT & DETAIL)
-    // =========================================================================
+    /*
+    |--------------------------------------------------------------------------
+    | 1. MANAGE TOWER (SISTEM KHUSUS / STATIS)
+    |--------------------------------------------------------------------------
+    */
 
     public function indexTower(Request $request)
     {
@@ -212,23 +31,17 @@ class AssetController extends Controller
         }
 
         $assets = $query->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
-
         $currentCategory = (object) ['name' => 'Tower', 'slug' => 'tower'];
 
-        // PERBAIKAN PATH VIEW: assets/tower/index.blade.php
         return view('assets.tower.index', compact('assets', 'currentCategory'));
     }
 
     public function show($id, Request $request)
     {
         $line = Asset::where('id', $id)->first();
-
-        if (!$line) {
-            return redirect()->back()->with('error', 'Jalur SUTT tidak ditemukan.');
-        }
+        if (!$line) return redirect()->back()->with('error', 'Jalur SUTT tidak ditemukan.');
 
         $allTowersOrdered = SuttTower::where('sutt_line_id', $id)->orderBy('tower_number', 'asc')->get();
-
         $pathLengthKm = 0;
         $prevLat = null;
         $prevLng = null;
@@ -236,9 +49,7 @@ class AssetController extends Controller
         foreach ($allTowersOrdered as $tower) {
             $dist = $this->calculateHaversineDistance($prevLat, $prevLng, $tower->latitude, $tower->longitude);
             $tower->jarak_antar_tower = $dist ? round($dist * 1000, 2) : null; 
-            
             $pathLengthKm += ($dist ?? 0);
-
             $prevLat = $tower->latitude;
             $prevLng = $tower->longitude;
         }
@@ -259,7 +70,6 @@ class AssetController extends Controller
             $t->jarak_antar_tower = $matched ? $matched->jarak_antar_tower : null;
         }
 
-        // PERBAIKAN PATH VIEW: assets/tower/show.blade.php (Pastikan nama filenya show.blade.php)
         return view('assets.tower.show', [
             'line' => $line,
             'towers' => $towers,
@@ -270,7 +80,6 @@ class AssetController extends Controller
 
     public function importForm()
     {
-        // PERBAIKAN PATH VIEW: assets/tower/import.blade.php
         return view('assets.tower.import');
     }
 
@@ -283,13 +92,10 @@ class AssetController extends Controller
 
         $uploadedFiles = $request->file('files');
         $totalCreatedFiles = 0;
-        $allSkippedReasons = [];
 
         foreach ($uploadedFiles as $file) {
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            
-            $defaultUpt = Unit::where('level', 2)->first();
-            $defaultUptId = $defaultUpt ? $defaultUpt->id : null;
+            $defaultUptId = Unit::where('level', 2)->first()->id ?? null;
 
             $assetLine = Asset::create([
                 'name'         => $originalName,
@@ -305,12 +111,7 @@ class AssetController extends Controller
 
             try {
                 if (!DB::table('sutt_lines')->where('id', $lineId)->exists()) {
-                    DB::table('sutt_lines')->insert([
-                        'id' => $lineId,
-                        'name' => $originalName,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                    DB::table('sutt_lines')->insert(['id' => $lineId, 'name' => $originalName, 'created_at' => now(), 'updated_at' => now()]);
                 }
             } catch (\Exception $e) {}
 
@@ -323,18 +124,14 @@ class AssetController extends Controller
 
             $rowIndex = 0;
             $towersToInsert = [];
-            
             $autoIncrementTowerId = 1; 
 
             while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
                 $rowIndex++;
-                
-                if ($rowIndex == 1) continue;
-                if (empty($row) || count($row) < 3) continue;
+                if ($rowIndex == 1 || empty($row) || count($row) < 3) continue;
 
                 $functloc = trim($row[2] ?? '');
                 $nama     = trim($row[6] ?? ('Tower ' . $rowIndex));
-                
                 $lat = !empty(trim($row[7] ?? '')) ? (float) trim($row[7]) : null;
                 $lng = !empty(trim($row[8] ?? '')) ? (float) trim($row[8]) : null;
 
@@ -342,7 +139,7 @@ class AssetController extends Controller
 
                 $towersToInsert[] = [
                     'sutt_line_id' => $lineId,
-                    'tower_number' => $autoIncrementTowerId, 
+                    'tower_number' => $autoIncrementTowerId++, 
                     'functloc'     => $functloc,
                     'name'         => $nama,
                     'latitude'     => $lat,
@@ -350,8 +147,6 @@ class AssetController extends Controller
                     'created_at'   => now(),
                     'updated_at'   => now(),
                 ];
-                
-                $autoIncrementTowerId++; 
             }
             fclose($handle);
 
@@ -359,37 +154,46 @@ class AssetController extends Controller
                 foreach (array_chunk($towersToInsert, 500) as $chunk) {
                     SuttTower::insertOrIgnore($chunk);
                 }
-
                 $this->recalcLineStats($lineId);
-
                 AssetHistory::create([
                     'asset_id' => $lineId,
                     'user_id' => auth()->id(),
                     'action' => 'TAMBAH',
                     'description' => "Mengimpor File CSV Tower: {$originalName} (" . count($towersToInsert) . " tower)",
                 ]);
-
                 $totalCreatedFiles++;
             }
         }
 
-        return redirect()->route('manage-asset.tower.index')
-            ->with('success', "Berhasil mengimpor {$totalCreatedFiles} File Data Tower ke database.");
+        return redirect()->route('manage-asset.tower.index')->with('success', "Berhasil mengimpor {$totalCreatedFiles} File Data Tower ke database.");
+    }
+
+    public function destroy(Asset $asset)
+    {
+        $assetName = $asset->name;
+        $assetId = $asset->id;
+        $asset->delete();
+
+        AssetHistory::create([
+            'asset_id' => $assetId,
+            'user_id' => auth()->id(),
+            'action' => 'HAPUS',
+            'description' => 'Menghapus aset/jalur SUTT: ' . $assetName,
+        ]);
+
+        return back()->with('success', 'File dan Data Tower di dalamnya berhasil dihapus.');
     }
 
     public function editTower($towerId)
     {
         $tower = SuttTower::findOrFail($towerId);
         $line = DB::table('sutt_lines')->where('id', $tower->sutt_line_id)->first();
-
-        // PERBAIKAN PATH VIEW: assets/tower/form.blade.php
         return view('assets.tower.form', compact('tower', 'line'));
     }
 
     public function updateTower(Request $request, $towerId)
     {
         $tower = SuttTower::findOrFail($towerId);
-
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'functloc' => ['required', 'string', 'max:100'],
@@ -398,7 +202,6 @@ class AssetController extends Controller
         ]);
 
         $tower->update($validated);
-
         $this->recalcLineStats($tower->sutt_line_id);
 
         AssetHistory::create([
@@ -408,8 +211,7 @@ class AssetController extends Controller
             'description' => 'Memperbarui data titik tower: ' . $tower->name,
         ]);
 
-        return redirect()->route('manage-asset.show', $tower->sutt_line_id)
-            ->with('success', 'Data tower berhasil diperbarui.');
+        return redirect()->route('manage-asset.show', $tower->sutt_line_id)->with('success', 'Data tower berhasil diperbarui.');
     }
 
     public function destroyTower($towerId)
@@ -417,9 +219,7 @@ class AssetController extends Controller
         $tower = SuttTower::findOrFail($towerId);
         $lineId = $tower->sutt_line_id;
         $towerName = $tower->name;
-
         $tower->delete();
-
         $this->recalcLineStats($lineId);
 
         AssetHistory::create([
@@ -429,70 +229,343 @@ class AssetController extends Controller
             'description' => 'Menghapus titik tower: ' . $towerName,
         ]);
 
-        return redirect()->route('manage-asset.show', $lineId)
-            ->with('success', 'Tower berhasil dihapus.');
+        return redirect()->route('manage-asset.show', $lineId)->with('success', 'Tower berhasil dihapus.');
     }
 
     private function recalcLineStats(int $lineId): void
     {
-        $panjang = $this->hitungPanjangJalurSUTT($lineId);
-        $jumlahTower = SuttTower::where('sutt_line_id', $lineId)->count();
+        $towers = SuttTower::where('sutt_line_id', $lineId)->orderBy('tower_number', 'asc')->get();
+        $totalKm = 0;
+
+        for ($i = 0; $i < count($towers) - 1; $i++) {
+            $totalKm += $this->calculateHaversineDistance($towers[$i]->latitude, $towers[$i]->longitude, $towers[$i+1]->latitude, $towers[$i+1]->longitude) ?? 0;
+        }
 
         try {
             Asset::where('id', $lineId)->update([
-                'panjang_km' => $panjang,
-                'jumlah_tower' => $jumlahTower,
+                'panjang_km' => round($totalKm, 2),
+                'jumlah_tower' => count($towers),
             ]);
         } catch (\Exception $e) {}
     }
 
-    public function hitungPanjangJalurSUTT($assetId)
+    private function calculateHaversineDistance($latFrom, $lonFrom, $latTo, $lonTo)
     {
-        $towers = SuttTower::where('sutt_line_id', $assetId)
-                    ->orderBy('tower_number', 'asc')
-                    ->get();
+        if (!$latFrom || !$lonFrom || !$latTo || !$lonTo) return null;
+        $earthRadius = 6371; 
+        $latDelta = deg2rad($latTo - $latFrom);
+        $lonDelta = deg2rad($lonTo - $lonFrom);
 
-        $totalKm = 0;
+        $a = sin($latDelta / 2) * sin($latDelta / 2) + cos(deg2rad($latFrom)) * cos(deg2rad($latTo)) * sin($lonDelta / 2) * sin($lonDelta / 2);
+        return $earthRadius * (2 * atan2(sqrt($a), sqrt(1 - $a))); 
+    }
 
-        for ($i = 0; $i < count($towers) - 1; $i++) {
-            $lat1 = $towers[$i]->latitude;
-            $lon1 = $towers[$i]->longitude;
 
-            $lat2 = $towers[$i+1]->latitude;
-            $lon2 = $towers[$i+1]->longitude;
+    /*
+    |--------------------------------------------------------------------------
+    | 2. MANAGE ASSET GENERIK (SISTEM SAPU JAGAT DINAMIS)
+    |--------------------------------------------------------------------------
+    */
 
-            $totalKm += $this->calculateHaversineDistance($lat1, $lon1, $lat2, $lon2) ?? 0;
+    public function indexByCategory($categorySlug, Request $request)
+    {
+        $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
+        $user = auth()->user();
+
+        $query = Asset::where('category', $currentCategory->name);
+
+        // DATA ISOLATION: User (Non-STI) hanya melihat aset di Unit-nya sendiri
+        if (strcasecmp($user->role, 'STI') !== 0) {
+            $query->where('unit_name', $user->department);
         }
 
-        return round($totalKm, 2);
+        if ($search = $request->search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'ILIKE', "%{$search}%")
+                  ->orWhere('asset_id', 'ILIKE', "%{$search}%")
+                  ->orWhere('unit_name', 'ILIKE', "%{$search}%");
+            });
+        }
+
+        $assets = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+
+        return view('assets.generic.index', compact('currentCategory', 'assets'));
     }
 
-    private function calculateHaversineDistance($latitudeFrom, $longitudeFrom, $latitudeTo, $longitudeTo)
+    public function createByCategory($categorySlug)
     {
-        if (!$latitudeFrom || !$longitudeFrom || !$latitudeTo || !$longitudeTo) return null;
+        $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
+        $asset = null;
 
-        $earthRadius = 6371; 
-
-        $latFrom = deg2rad((float)$latitudeFrom);
-        $lonFrom = deg2rad((float)$longitudeFrom);
-        $latTo = deg2rad((float)$latitudeTo);
-        $lonTo = deg2rad((float)$longitudeTo);
-
-        $latDelta = $latTo - $latFrom;
-        $lonDelta = $lonTo - $lonFrom;
-
-        $a = sin($latDelta / 2) * sin($latDelta / 2) +
-             cos($latFrom) * cos($latTo) *
-             sin($lonDelta / 2) * sin($lonDelta / 2);
-
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-
-        return $earthRadius * $c; 
+        return view('assets.generic.form', compact('currentCategory', 'asset'));
     }
 
-    // =========================================================================
-    // 3. ASSET HISTORY & EXPORT
-    // =========================================================================
+    public function storeByCategory(Request $request, $categorySlug)
+    {
+        $currentCategory = AssetCategory::with('fields')->where('slug', $categorySlug)->firstOrFail();
+
+        // 1. TANGKAP SEMUA INPUTAN SPESIFIK (DINAMIS)
+        $specifications = [];
+        foreach ($currentCategory->fields as $field) {
+            $specifications[$field->field_key] = $request->input($field->field_key);
+        }
+
+        // 2. SIMPAN DATA KE TABLE ASSETS (ATRIBUT UMUM + JSON SPESIFIKASI)
+        $asset = Asset::create([
+            'asset_id' => $request->asset_id,
+            'name' => $request->name ?? $request->asset_id,
+            'category' => $currentCategory->name,
+            'unit_name' => $request->unit_name,
+            'upt_id' => $request->upt_id ?? 1, // Fallback migrasi lama
+            
+            // Kolom Atribut Umum
+            'acquisition_date' => $request->acquisition_date,
+            'ownership_status' => $request->ownership_status,
+            'ownership_desc' => $request->ownership_desc,
+            'condition_status' => $request->condition_status,
+            'operational_status' => $request->operational_status,
+            'criticality_level' => $request->criticality_level,
+            'security_classification' => $request->security_classification,
+            'last_maintenance_date' => $request->last_maintenance_date,
+            'description' => $request->description,
+            'location_desc' => $request->location_desc,
+            'pic' => $request->pic,
+            'pic_department' => $request->pic_department,
+
+            // Kolom Atribut Dinamis
+            'specifications' => $specifications,
+        ]);
+
+        AssetHistory::create([
+            'asset_id' => $asset->id,
+            'user_id' => auth()->id(),
+            'action' => 'TAMBAH',
+            'description' => "Menambahkan {$currentCategory->name} baru: {$asset->name}",
+        ]);
+
+        return redirect()->route('manage-asset.generic.index', $categorySlug)->with('success', "{$currentCategory->name} berhasil ditambahkan.");
+    }
+
+    public function editByCategory($categorySlug, $id)
+    {
+        $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
+        $asset = Asset::where('category', $currentCategory->name)->findOrFail($id);
+
+        return view('assets.generic.form', compact('currentCategory', 'asset'));
+    }
+
+    public function updateByCategory(Request $request, $categorySlug, $id)
+    {
+        $currentCategory = AssetCategory::with('fields')->where('slug', $categorySlug)->firstOrFail();
+        $asset = Asset::where('category', $currentCategory->name)->findOrFail($id);
+
+        // 1. TANGKAP SEMUA INPUTAN SPESIFIK (DINAMIS)
+        $specifications = [];
+        foreach ($currentCategory->fields as $field) {
+            $specifications[$field->field_key] = $request->input($field->field_key);
+        }
+
+        // 2. PERBARUI DATABASE
+        $asset->update([
+            'asset_id' => $request->asset_id,
+            'name' => $request->name ?? $request->asset_id,
+            'unit_name' => $request->unit_name,
+            
+            // Kolom Atribut Umum
+            'acquisition_date' => $request->acquisition_date,
+            'ownership_status' => $request->ownership_status,
+            'ownership_desc' => $request->ownership_desc,
+            'condition_status' => $request->condition_status,
+            'operational_status' => $request->operational_status,
+            'criticality_level' => $request->criticality_level,
+            'security_classification' => $request->security_classification,
+            'last_maintenance_date' => $request->last_maintenance_date,
+            'description' => $request->description,
+            'location_desc' => $request->location_desc,
+            'pic' => $request->pic,
+            'pic_department' => $request->pic_department,
+
+            // Kolom Atribut Dinamis
+            'specifications' => $specifications,
+        ]);
+
+        AssetHistory::create([
+            'asset_id' => $asset->id,
+            'user_id' => auth()->id(),
+            'action' => 'UBAH',
+            'description' => "Memperbarui {$currentCategory->name}: {$asset->name}",
+        ]);
+
+        return redirect()->route('manage-asset.generic.index', $categorySlug)->with('success', "{$currentCategory->name} berhasil diperbarui.");
+    }
+
+    public function destroyByCategory($categorySlug, $id)
+    {
+        $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
+        $asset = Asset::where('category', $currentCategory->name)->findOrFail($id);
+        
+        $assetName = $asset->name;
+        $asset->delete();
+
+        AssetHistory::create([
+            'asset_id' => $id,
+            'user_id' => auth()->id(),
+            'action' => 'HAPUS',
+            'description' => "Menghapus {$currentCategory->name}: {$assetName}",
+        ]);
+
+        return redirect()->route('manage-asset.generic.index', $categorySlug)->with('success', "{$currentCategory->name} berhasil dihapus.");
+    }
+
+    public function importFormByCategory($categorySlug)
+    {
+        $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
+        return view('assets.generic.import', compact('currentCategory'));
+    }
+
+    public function importStoreByCategory(Request $request, $categorySlug)
+    {
+        $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
+        
+        $request->validate([
+            'files'   => ['required', 'array'],
+            'files.*' => ['required', 'file'],
+        ]);
+
+        $totalCreated = 0;
+        $defaultUptId = Unit::where('level', 2)->first()->id ?? 1;
+
+        // DAFTAR ATRIBUT UMUM (Nama Header CSV yang akan masuk ke kolom utama tabel 'assets', bukan ke JSON)
+        // Anda bisa menyesuaikan atau menambah alias nama header di sini
+        $commonFieldsMap = [
+            'id aset' => 'asset_id',
+            'asset id' => 'asset_id',
+            'nama' => 'name',
+            'nama aset' => 'name',
+            'unit' => 'unit_name',
+            'departemen' => 'unit_name',
+            'status kondisi' => 'condition_status',
+            'kondisi' => 'condition_status',
+            'status operasional' => 'operational_status',
+            'operasional' => 'operational_status',
+            'pic' => 'pic',
+            'pic pencatat' => 'pic',
+        ];
+
+        foreach ($request->file('files') as $file) {
+            $handle = fopen($file->getRealPath(), 'r');
+            
+            // 1. DETEKSI DELIMITER & BACA HEADER (BARIS PERTAMA CSV)
+            $firstLine = fgets($handle);
+            rewind($handle);
+            $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+            
+            $headers = fgetcsv($handle, 0, $delimiter);
+            if (!$headers) continue;
+
+            // Bersihkan nama header dari spasi berlebih atau karakter aneh
+            $headers = array_map(function($val) {
+                return trim(preg_replace('/[\x00-\x1F\x7F-\xFF]/', '', $val)); 
+            }, $headers);
+
+            // 2. AUTO-SCHEMA DISCOVERY (Bikin Form Otomatis dari Header CSV)
+            $dynamicKeys = [];
+            foreach ($headers as $index => $headerName) {
+                if (empty($headerName)) continue;
+
+                $headerLower = strtolower($headerName);
+                
+                // Cek apakah header ini bagian dari Atribut Umum? Jika ya, lewati.
+                if (array_key_exists($headerLower, $commonFieldsMap)) {
+                    continue; 
+                }
+
+                // Jika bukan atribut umum, ini adalah ATRIBUT SPESIFIK (Dinamis).
+                // Buat key yang aman untuk JSON (contoh: "IP Address" jadi "ip_address")
+                $fieldKey = \Illuminate\Support\Str::slug($headerName, '_');
+                $dynamicKeys[$index] = $fieldKey;
+
+               // AUTO-CREATE FORM FIELD JIKA BELUM ADA DI DATABASE
+                \App\Models\AssetCategoryField::firstOrCreate(
+                    [
+                        'asset_category_id' => $currentCategory->id,
+                        'field_key' => $fieldKey,
+                    ],
+                    [
+                        'name' => ucwords(str_replace('_', ' ', $headerName)), // <-- Sudah disesuaikan dengan DB
+                        'field_type' => 'text', 
+                        'is_required' => false,
+                        'show_in_table' => true,
+                        'group_name' => 'ATRIBUT SPESIFIK', // Agar masuk ke dalam grup form yang rapi
+                    ]
+                );
+            }
+
+            // 3. BACA DATA BARIS DEMI BARIS
+            while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+                if (empty($row) || count($row) < 1) continue;
+
+                $assetData = [
+                    'category' => $currentCategory->name,
+                    'upt_id' => $defaultUptId,
+                    'pic' => auth()->user()->name, // Default PIC
+                    'condition_status' => 'Baik', // Default Kondisi
+                    'operational_status' => 'Aktif', // Default Operasional
+                ];
+                $specifications = [];
+
+                // Mapping isi baris ke header
+                foreach ($headers as $index => $headerName) {
+                    $val = trim($row[$index] ?? '');
+                    $headerLower = strtolower($headerName);
+
+                    // Jika ini atribut umum, masukkan ke kolom utama
+                    if (array_key_exists($headerLower, $commonFieldsMap)) {
+                        $dbColumn = $commonFieldsMap[$headerLower];
+                        if (!empty($val)) {
+                            $assetData[$dbColumn] = $val;
+                        }
+                    } 
+                    // Jika ini atribut spesifik, masukkan ke JSON
+                    else if (isset($dynamicKeys[$index])) {
+                        $specifications[$dynamicKeys[$index]] = $val;
+                    }
+                }
+
+                // Pastikan ID Aset dan Nama tidak kosong
+                if (empty($assetData['asset_id'])) {
+                    $assetData['asset_id'] = strtoupper($currentCategory->slug) . '-' . strtoupper(\Illuminate\Support\Str::random(6));
+                }
+                if (empty($assetData['name'])) {
+                    $assetData['name'] = $assetData['asset_id'];
+                }
+
+                $assetData['specifications'] = $specifications;
+
+                // SIMPAN KE DATABASE
+                $asset = Asset::create($assetData);
+                $totalCreated++;
+            }
+            fclose($handle);
+        }
+
+        if ($totalCreated > 0) {
+            AssetHistory::create([
+                'asset_id' => $asset->id ?? 0,
+                'user_id' => auth()->id(),
+                'action' => 'TAMBAH',
+                'description' => "Impor massal dan Auto-Generate Form {$currentCategory->name} ({$totalCreated} data).",
+            ]);
+        }
+
+        return redirect()->route('manage-asset.generic.index', $categorySlug)->with('success', "{$totalCreated} data {$currentCategory->name} berhasil diimpor & form otomatis disesuaikan.");
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | 3. ASSET HISTORY & EXPORT
+    |--------------------------------------------------------------------------
+    */
 
     public function history(Request $request)
     {
@@ -502,21 +575,18 @@ class AssetController extends Controller
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('action', 'like', "%{$search}%")
-                ->orWhere('asset_id', 'like', "%{$search}%")
-                ->orWhere('description', 'like', "%{$search}%");
+                  ->orWhere('asset_id', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
         $histories = $query->paginate(15)->withQueryString();
-
-        // Berdasarkan struktur Anda, file assetHistory.blade.php ada langsung di dalam resources/views
         return view('assetHistory', compact('histories'));
     }
 
     public function exportCsv()
     {
         $fileName = 'riwayat_perubahan_aset_' . date('Y-m-d_H-i-s') . '.csv';
-
         $headers = [
             "Content-type"        => "text/csv",
             "Content-Disposition" => "attachment; filename=$fileName",
@@ -527,7 +597,6 @@ class AssetController extends Controller
 
         $callback = function () {
             $file = fopen('php://output', 'w');
-
             fputcsv($file, ['Waktu', 'Aksi', 'ID Aset', 'Rincian', 'Oleh']);
 
             AssetHistory::with('user')->orderBy('created_at', 'desc')->chunk(500, function ($histories) use ($file) {
@@ -541,7 +610,6 @@ class AssetController extends Controller
                     ]);
                 }
             });
-
             fclose($file);
         };
 

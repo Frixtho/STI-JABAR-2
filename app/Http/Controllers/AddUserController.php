@@ -38,6 +38,7 @@ class AddUserController extends Controller
     
     public function create()
     {
+        $units = \App\Models\Unit::all();
         return view('users.form'); 
     }
 
@@ -67,9 +68,11 @@ class AddUserController extends Controller
         return redirect()->route('manage-user')->with('success', 'Pengguna berhasil ditambahkan.');
     }
 
-    public function edit(User $user)
+    public function edit($id)
     {
-        return view('users.form', compact('user'));
+        $user = \App\Models\User::findOrFail($id);
+        $units = \App\Models\Unit::all();
+        return view('users.form', compact('user', 'units'));
     }
 
     public function update(Request $request, User $user)

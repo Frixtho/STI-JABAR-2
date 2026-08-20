@@ -23,6 +23,11 @@ class Asset extends Model
         'panjang_km',
         'latitude',
         'longitude',
+        'specifications',
+    ];
+
+    protected $casts = [
+        'specifications' => 'array', // <--- Wajib tambahkan ini agar JSON dibaca otomatis
     ];
 
     // Relasi ke Gardu Induk (GI) Awal

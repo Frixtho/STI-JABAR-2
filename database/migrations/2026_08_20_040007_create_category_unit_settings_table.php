@@ -11,11 +11,11 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('asset_categories', function (Blueprint $table) {
+        Schema::create('category_unit_settings', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Contoh: "Router", "Access Point"
-            $table->string('slug')->unique(); // Contoh: "router", "access-point" (Buat URL)
-            $table->string('icon')->nullable(); // Opsional: untuk icon di sidebar
+            $table->foreignId('asset_category_id')->constrained('asset_categories')->cascadeOnDelete();
+            $table->string('unit_name'); // Nama departemen/unit dari tabel user
+            $table->boolean('is_active'); // Status paksa (true/false)
             $table->timestamps();
         });
     }
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('asset_categories');
+        Schema::dropIfExists('category_unit_settings');
     }
 };

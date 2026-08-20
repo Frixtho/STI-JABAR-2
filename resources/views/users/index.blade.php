@@ -29,7 +29,7 @@
                 <div class="flex items-center gap-2">
                     <div class="text-right leading-tight">
                         <p class="text-sm font-semibold text-pln-800 dark:text-white">{{ auth()->user()->name }}</p>
-                        <p class="text-[10px] font-semibold uppercase tracking-wide {{ strcasecmp(auth()->user()->role, 'Admin') === 0 ? 'text-accent-500' : 'text-gray-400 dark:text-gray-500' }}">
+                        <p class="text-[10px] font-semibold uppercase tracking-wide {{ strcasecmp(auth()->user()->role, 'STI') === 0 ? 'text-accent-500' : 'text-gray-400 dark:text-gray-500' }}">
                             {{ auth()->user()->role }}
                         </p>
                     </div>
@@ -60,7 +60,6 @@
                 <h1 class="text-lg font-bold text-pln-800 dark:text-white tracking-wide">Manage User</h1>
                 
                 <div class="flex items-center gap-3">
-                    {{-- TOMBOL IMPORT YANG MENGARAH KE HALAMAN BARU --}}
                     <a href="{{ route('manage-user.import.form') }}" class="inline-flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
                         <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
@@ -92,21 +91,6 @@
                     </div>
 
                     <div class="flex items-center gap-2 shrink-0">
-                        <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Role:</label>
-                        <div class="relative w-28">
-                            <select name="role" onchange="this.form.submit()" class="w-full appearance-none rounded-lg border border-gray-300 dark:border-gray-600 py-2 pl-3 pr-7 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] cursor-pointer">
-                                <option value="All" {{ request('role') == 'All' || !request('role') ? 'selected' : '' }}>All</option>
-                                <option value="Admin" {{ request('role') == 'Admin' ? 'selected' : '' }}>Admin</option>
-                                <option value="Manager" {{ request('role') == 'Manager' ? 'selected' : '' }}>Manager</option>
-                                <option value="Staff" {{ request('role') == 'Staff' ? 'selected' : '' }}>Staff</option>
-                            </select>
-                            <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-gray-400">
-                                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-2 shrink-0">
                         <label class="text-sm font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap">Status:</label>
                         <div class="relative w-28">
                             <select name="status" onchange="this.form.submit()" class="w-full appearance-none rounded-lg border border-gray-300 dark:border-gray-600 py-2 pl-3 pr-7 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54] cursor-pointer">
@@ -120,7 +104,6 @@
                         </div>
                     </div>
 
-                    {{-- Tombol Cari tambahan (Opsional agar user bisa tekan Enter / klik cari) --}}
                     <div class="shrink-0">
                         <button type="submit" class="bg-[#004A54] text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-[#00363d] transition-colors">
                             Cari
@@ -138,10 +121,11 @@
             {{-- ===================== TABLE ===================== --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
 
+                {{-- Header Tabel (Diubah menjadi Departemen/Unit) --}}
                 <div class="grid grid-cols-5 bg-gray-50 dark:bg-gray-900/40 px-6 py-3 border-b border-gray-200 dark:border-gray-700 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     <div>User</div>
                     <div>Email</div>
-                    <div>Role</div>
+                    <div>Departemen / Unit</div>
                     <div>Status</div>
                     <div class="text-center">Action</div>
                 </div>
@@ -164,14 +148,11 @@
                                 {{ $user->email }}
                             </div>
 
-                            <div>
-                                @if(strcasecmp($user->role, 'Admin') === 0)
-                                    <span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 uppercase tracking-wide">Admin</span>
-                                @elseif(strcasecmp($user->role, 'Manager') === 0)
-                                    <span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300 uppercase tracking-wide">Manager</span>
-                                @else
-                                    <span class="px-2.5 py-1 text-xs font-semibold rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 uppercase tracking-wide">Staff</span>
-                                @endif
+                            {{-- Isi Tabel Departemen/Unit (Yang sebelumnya Role) --}}
+                            <div class="truncate pr-4">
+                                <span class="inline-flex items-center px-3 py-1.5 rounded-md text-xs font-bold bg-gray-100 text-gray-700 uppercase tracking-wide">
+                                    {{ $user->department ?? '-' }}
+                                </span>
                             </div>
 
                             <div>
@@ -189,7 +170,7 @@
                             </div>
 
                             <div class="flex items-center justify-center gap-2">
-                                @if(strcasecmp(auth()->user()->role, 'Admin') === 0)
+                                @if(strcasecmp(auth()->user()->role, 'STI') === 0)
                                     <a href="{{ route('manage-user.edit', $user->id) }}" class="text-gray-400 dark:text-gray-500 hover:text-[#004A54] dark:hover:text-accent-400 p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -246,7 +227,6 @@
 </div>
 
 <script>
-    // Hanya dideklarasikan satu kali
     const adminMenuToggle = document.getElementById('adminMenuToggle');
     const adminSubmenu = document.getElementById('adminSubmenu');
     const adminMenuChevron = document.getElementById('adminMenuChevron');

@@ -272,13 +272,34 @@ class AssetController extends Controller
         $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
         $user = auth()->user();
 
+        // 1. Query dasar: Ambil aset berdasarkan kategorinya
         $query = Asset::where('category', $currentCategory->name);
 
-        // DATA ISOLATION: User (Non-STI) hanya melihat aset di Unit-nya sendiri
-        if (strcasecmp($user->role, 'STI') !== 0) {
-            $query->where('unit_name', $user->department);
+        /*
+        |--------------------------------------------------------------------------
+        | 2. FITUR ISOLASI DATA (FILTER LOKASI BERDASARKAN USER)
+        |--------------------------------------------------------------------------
+        */
+        // Daftar role yang memiliki akses "Super" untuk melihat semua data aset.
+        // Sesuaikan nama role ini dengan yang ada di tabel `users` Anda!
+        $superRoles = ['admin utama', 'superadmin', 'admin', 'sti jabar', 'sti']; 
+        $isSuperUser = in_array(strtolower($user->role), $superRoles);
+
+        if (!$isSuperUser) {
+            // DAPATKAN LOKASI USER SAAT INI
+            // Ubah `$user->unit_name` di bawah ini dengan nama kolom di tabel `users` Anda.
+            // (Contoh: jika nama kolomnya 'department', ubah jadi $user->department)
+            $userLokasi = $user->unit_name ?? $user->department ?? $user->unit->name ?? '';
+
+            // Filter paksa: Hanya tampilkan aset yang lokasinya sama dengan lokasi user
+            $query->where('unit_name', $userLokasi);
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | 3. FITUR PENCARIAN (SEARCH)
+        |--------------------------------------------------------------------------
+        */
         if ($search = $request->search) {
             $query->where(function($q) use ($search) {
                 $q->where('name', 'ILIKE', "%{$search}%")
@@ -287,6 +308,7 @@ class AssetController extends Controller
             });
         }
 
+        // 4. Tampilkan dengan Pagination
         $assets = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
 
         return view('assets.generic.index', compact('currentCategory', 'assets'));
@@ -295,9 +317,13 @@ class AssetController extends Controller
     public function createByCategory($categorySlug)
     {
         $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
+        
+        // Ambil semua daftar unit/lokasi dari database (Sesuaikan dengan model Unit Anda)
+        $units = \App\Models\Unit::orderBy('name')->get(); 
+        
         $asset = null;
 
-        return view('assets.generic.form', compact('currentCategory', 'asset'));
+        return view('assets.generic.form', compact('currentCategory', 'asset', 'units'));
     }
 
     public function storeByCategory(Request $request, $categorySlug)
@@ -350,8 +376,11 @@ class AssetController extends Controller
     {
         $currentCategory = AssetCategory::where('slug', $categorySlug)->firstOrFail();
         $asset = Asset::where('category', $currentCategory->name)->findOrFail($id);
+        
+        // Ambil semua daftar unit/lokasi dari database
+        $units = \App\Models\Unit::orderBy('name')->get(); 
 
-        return view('assets.generic.form', compact('currentCategory', 'asset'));
+        return view('assets.generic.form', compact('currentCategory', 'asset', 'units'));
     }
 
     public function updateByCategory(Request $request, $categorySlug, $id)
@@ -435,13 +464,6 @@ class AssetController extends Controller
         $totalCreated = 0;
         $defaultUptId = Unit::where('level', 2)->first()->id ?? 1;
 
-        /*
-        |--------------------------------------------------------------------------
-        | KAMUS KATA KUNCI (Fuzzy Match)
-        |--------------------------------------------------------------------------
-        | Urutkan dari frasa yang paling spesifik/panjang ke yang paling pendek!
-        | Sistem akan mengecek apakah header CSV mengandung salah satu kata di bawah ini.
-        */
         $commonKeywords = [
             'ket. status kepemilikan' => 'ownership_desc',
             'keterangan status kepemilikan' => 'ownership_desc',
@@ -449,7 +471,7 @@ class AssetController extends Controller
             'kepemilikan' => 'ownership_status',
             'keterangan lokasi' => 'location_desc',
             'lokasi aset saat ini' => 'unit_name', 
-            'lokasi' => 'location_desc',
+            'lokasi' => 'unit_name',
             'id aset' => 'asset_id',
             'asset id' => 'asset_id',
             'nama aset' => 'name',
@@ -475,7 +497,6 @@ class AssetController extends Controller
         foreach ($request->file('files') as $file) {
             $handle = fopen($file->getRealPath(), 'r');
             
-            // 1. DETEKSI DELIMITER & BACA HEADER (BARIS PERTAMA CSV)
             $firstLine = fgets($handle);
             rewind($handle);
             $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
@@ -483,14 +504,12 @@ class AssetController extends Controller
             $headers = fgetcsv($handle, 0, $delimiter);
             if (!$headers) continue;
 
-            // Bersihkan nama header dari spasi berlebih atau karakter gaib
             $headers = array_map(function($val) {
                 return trim(preg_replace('/[\x00-\x1F\x7F-\xFF]/', '', $val)); 
             }, $headers);
 
-            // 2. AUTO-SCHEMA DISCOVERY & MAPPING KATA KUNCI
             $dynamicKeys = [];
-            $headerMapping = []; // Menyimpan peta "Kolom ini masuk ke DB mana?"
+            $headerMapping = [];
 
             foreach ($headers as $index => $headerName) {
                 if (empty($headerName)) continue;
@@ -498,24 +517,20 @@ class AssetController extends Controller
                 $headerLower = strtolower($headerName);
                 $matchedDbColumn = null;
 
-                // Loop kamus untuk mengecek apakah kata kunci ada di dalam header CSV
                 foreach ($commonKeywords as $keyword => $dbCol) {
                     if (\Illuminate\Support\Str::contains($headerLower, $keyword)) {
                         $matchedDbColumn = $dbCol;
-                        break; // Stop di kecocokan pertama
+                        break;
                     }
                 }
 
                 if ($matchedDbColumn) {
-                    // Jika cocok, tandai index ini sebagai ATRIBUT UMUM
                     $headerMapping[$index] = ['type' => 'common', 'key' => $matchedDbColumn];
                 } else {
-                    // Jika tidak ada kata kunci yang cocok, berarti ini ATRIBUT SPESIFIK (Dinamis)
                     $fieldKey = \Illuminate\Support\Str::slug($headerName, '_');
                     $dynamicKeys[$index] = $fieldKey;
                     $headerMapping[$index] = ['type' => 'dynamic', 'key' => $fieldKey];
 
-                    // Buat Form Dinamisnya secara otomatis
                     \App\Models\AssetCategoryField::firstOrCreate(
                         [
                             'asset_category_id' => $currentCategory->id,
@@ -532,16 +547,15 @@ class AssetController extends Controller
                 }
             }
 
-            // 3. BACA DATA BARIS DEMI BARIS LALU MASUKKAN SESUAI MAPPING
             while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
                 if (empty($row) || count($row) < 1) continue;
 
                 $assetData = [
                     'category' => $currentCategory->name,
                     'upt_id' => $defaultUptId,
-                    'pic' => auth()->user()->name, // Default PIC
-                    'condition_status' => 'Baik', // Default Kondisi
-                    'operational_status' => 'Aktif', // Default Operasional
+                    'pic' => auth()->user()->name, 
+                    'condition_status' => 'Baik', 
+                    'operational_status' => 'Aktif', 
                 ];
                 $specifications = [];
 
@@ -552,19 +566,34 @@ class AssetController extends Controller
                     $mapInfo = $headerMapping[$index];
 
                     if ($mapInfo['type'] === 'common') {
-                        // Khusus untuk format Tanggal (Ubah teks ke format Date DB)
-                        if (in_array($mapInfo['key'], ['acquisition_date', 'last_maintenance_date']) && strtotime($val)) {
-                            $assetData[$mapInfo['key']] = date('Y-m-d', strtotime($val));
-                        } else {
+                        // NORMALISASI TANGGAL: Ubah dari DD-MM-YYYY ke YYYY-MM-DD agar masuk ke database & form date picker
+                        if (in_array($mapInfo['key'], ['acquisition_date', 'last_maintenance_date', 'masa_berlaku_garansi'])) {
+                            $parsedDate = null;
+                            if (strpos($val, '-') !== false) {
+                                $parts = explode('-', $val);
+                                if (count($parts) === 3) {
+                                    // Jika formatnya DD-MM-YYYY
+                                    if (strlen($parts[0]) === 2 && strlen($parts[2]) === 4) {
+                                        $parsedDate = "{$parts[2]}-{$parts[1]}-{$parts[0]}";
+                                    } else {
+                                        $parsedDate = $val; // Sudah YYYY-MM-DD
+                                    }
+                                }
+                            }
+                            $assetData[$mapInfo['key']] = $parsedDate && strtotime($parsedDate) ? $parsedDate : null;
+                        } 
+                        // NORMALISASI DROPDOWN (Kondisi & Operasional): Jadikan Capitalize agar cocok dengan opsi form
+                        elseif (in_array($mapInfo['key'], ['condition_status', 'operational_status'])) {
+                            $assetData[$mapInfo['key']] = ucfirst(strtolower($val));
+                        } 
+                        else {
                             $assetData[$mapInfo['key']] = $val;
                         }
                     } else {
-                        // Masukkan ke format JSON Spesifikasi Dinamis
                         $specifications[$mapInfo['key']] = $val;
                     }
                 }
 
-                // Validasi data kosong untuk field Wajib
                 if (empty($assetData['asset_id'])) {
                     $assetData['asset_id'] = strtoupper($currentCategory->slug) . '-' . strtoupper(\Illuminate\Support\Str::random(6));
                 }
@@ -574,8 +603,7 @@ class AssetController extends Controller
 
                 $assetData['specifications'] = $specifications;
 
-                // SIMPAN KE DATABASE
-                $asset = Asset::create($assetData);
+                Asset::create($assetData);
                 $totalCreated++;
             }
             fclose($handle);
@@ -583,7 +611,7 @@ class AssetController extends Controller
 
         if ($totalCreated > 0) {
             AssetHistory::create([
-                'asset_id' => $asset->id ?? 0,
+                'asset_id' => 0,
                 'user_id' => auth()->id(),
                 'action' => 'TAMBAH',
                 'description' => "Impor massal dan Auto-Generate Form {$currentCategory->name} ({$totalCreated} data).",

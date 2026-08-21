@@ -86,17 +86,40 @@ class UnitController extends Controller
     {
         $validated = $this->validateUnit($request);
 
-        $unit = Unit::create($validated);
+        // 1. Tentukan Induk Terendah Berdasarkan Level
+        $parentId = null;
+        $level = $request->level;
 
-        // Catat riwayat penambahan unit
-        AssetHistory::create([
-            'asset_id'    => null,
-            'user_id'     => Auth::id(),
-            'action'      => 'TAMBAH',
-            'description' => 'Menambahkan unit baru: ' . $unit->name,
+        if ($level == 2) {
+            $parentId = $request->parent_lvl_1;
+        } elseif ($level == 3) {
+            $parentId = $request->parent_lvl_2;
+        } elseif ($level == 4) {
+            $parentId = $request->parent_lvl_3;
+        }
+
+        // 2. OTOMATISASI TIPE UNIT (Ambil kata pertama dari Nama)
+        // Contoh: "UP3 Jayapura" -> akan diambil "UP3"
+        // Contoh: "GI Bandung Selatan" -> akan diambil "GI"
+        $namaUnit = trim($request->name);
+        $tipeOtomatis = strtoupper(explode(' ', $namaUnit)[0]); 
+
+        // 3. Amankan format kordinat (Ganti koma jadi titik)
+        $latitude = str_replace(',', '.', $request->latitude);
+        $longitude = str_replace(',', '.', $request->longitude);
+
+        // 4. Simpan ke database
+        Unit::create([
+            'name'      => $namaUnit,
+            'code'      => $request->code,
+            'level'     => $level,
+            'type'      => $tipeOtomatis, // <--- INI KUNCI SOLUSINYA
+            'parent_id' => $parentId,
+            'latitude'  => $latitude,
+            'longitude' => $longitude,
         ]);
 
-        return redirect()->route('manage-unit')->with('success', 'Unit berhasil ditambahkan.');
+        return redirect()->route('manage-unit')->with('success', 'Unit berhasil ditambahkan!');    
     }
 
     public function edit(Unit $unit)

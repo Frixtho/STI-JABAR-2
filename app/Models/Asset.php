@@ -9,42 +9,12 @@ class Asset extends Model
 {
     use HasFactory;
 
-    protected $table = 'assets';
+    // Ganti $fillable dengan $guarded = []. 
+    // Ini mengizinkan semua kolom di tabel (termasuk atribut umum baru) untuk diisi secara massal lewat import.
+    protected $guarded = [];
 
-    protected $fillable = [
-        'name',
-        'functloc',
-        'category',
-        'upt_id',
-        'tegangan',
-        'gi_awal_id',
-        'gi_akhir_id',
-        'jumlah_tower',
-        'panjang_km',
-        'latitude',
-        'longitude',
-        'specifications',
-    ];
-
+    // Pastikan spesifikasi di-cast ke array (JSON)
     protected $casts = [
-        'specifications' => 'array', // <--- Wajib tambahkan ini agar JSON dibaca otomatis
+        'specifications' => 'array',
     ];
-
-    // Relasi ke Gardu Induk (GI) Awal
-    public function giAwal()
-    {
-        return $this->belongsTo(Unit::class, 'gi_awal_id');
-    }
-
-    // Relasi ke Gardu Induk (GI) Akhir
-    public function giAkhir()
-    {
-        return $this->belongsTo(Unit::class, 'gi_akhir_id');
-    }
-
-    // Ubah nama fungsi relasinya agar tidak sama persis dengan nama kolom 'category'
-    public function assetCategory()
-    {
-        return $this->belongsTo(AssetCategory::class, 'asset_category_id');
-    }
 }

@@ -124,10 +124,22 @@
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Lokasi Aset Saat Ini (Kode) <span class="text-red-500">*</span></label>
-                            <select name="unit_name" required class="w-full rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-700 py-2.5 px-3 focus:ring-[#004A54]">
-                                <option value="" disabled {{ old('unit_name', $asset->unit_name ?? '') ? '' : 'selected' }}>— Pilih Unit —</option>
-                                @foreach(\App\Models\Unit::orderBy('name')->get() as $unit)
-                                    <option value="{{ $unit->name }}" @selected(old('unit_name', $asset->unit_name ?? '') == $unit->name)>
+                            @php
+                                $currentUnit = old('unit_name', $asset->unit_name ?? '');
+                                $isUnitInDB = $units->contains(function($u) use ($currentUnit) {
+                                    return strcasecmp(trim($u->name), trim($currentUnit)) === 0;
+                                });
+                            @endphp
+                            
+                            <select name="unit_name" required class="w-full rounded-md border-gray-300 py-2.5 px-3 focus:ring-[#004A54]">
+                                <option value="">— Pilih Unit —</option>
+                                @if(!empty($currentUnit) && !$isUnitInDB)
+                                    <option value="{{ $currentUnit }}" selected class="bg-red-50 text-red-600 font-semibold">
+                                        {{ $currentUnit }} (Belum terdaftar di Master Unit)
+                                    </option>
+                                @endif
+                                @foreach($units as $unit)
+                                    <option value="{{ $unit->name }}" {{ strcasecmp(trim($currentUnit), trim($unit->name)) === 0 ? 'selected' : '' }}>
                                         {{ $unit->name }}
                                     </option>
                                 @endforeach
@@ -172,7 +184,9 @@
             {{-- ===================== ATRIBUT SPESIFIK (DINAMIS) ===================== --}}
             <div class="space-y-10">
                 @php
-                    $groupedFields = $currentCategory->fields->groupBy('group_name');
+                    // MENGAMBIL FIELD SELAIN ATRIBUT UMUM AGAR TIDAK DOUBLE
+                    $specificFields = $currentCategory->fields->where('group_name', '!=', 'ATRIBUT UMUM');
+                    $groupedFields = $specificFields->groupBy('group_name');
                 @endphp
 
                 @foreach($groupedFields as $groupName => $fields)
@@ -198,7 +212,21 @@
                                         <select name="{{ $field->field_key }}" {{ $field->is_required ? 'required' : '' }} 
                                                 class="w-full rounded-md border-gray-300 py-2.5 px-3 focus:ring-[#004A54] focus:border-[#004A54] text-gray-700">
                                             <option value="">— Pilih {{ $field->name }} —</option>
-                                            @foreach($field->options as $opt)
+                                            
+                                            @php 
+                                                // PERBAIKAN BUG MALFORMED COMPILER DI SINI:
+                                                // Mencegah error null atau array yang salah struktur.
+                                                $optionsList = $field->options;
+                                                if (is_string($optionsList)) {
+                                                    $optionsList = explode(',', $optionsList);
+                                                }
+                                                if (!is_array($optionsList)) {
+                                                    $optionsList = [];
+                                                }
+                                            @endphp
+                                            
+                                            @foreach($optionsList as $opt)
+                                                @php $opt = trim($opt); @endphp
                                                 <option value="{{ $opt }}" {{ $val == $opt ? 'selected' : '' }}>{{ $opt }}</option>
                                             @endforeach
                                         </select>

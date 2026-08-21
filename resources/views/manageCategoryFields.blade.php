@@ -89,144 +89,77 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                         
-                        {{-- ===================== 1. ATRIBUT UMUM (BAWAAN SISTEM) ===================== --}}
+                        {{-- 1. ATRIBUT UMUM (SEKARANG BACA DARI DATABASE) --}}
                         <tr class="bg-gray-50/80 dark:bg-gray-800/80">
-                            <td colspan="4" class="px-6 py-3 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest bg-gray-50 dark:bg-gray-900/30">
+                            <td colspan="4" class="px-6 py-3 text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
                                 Atribut Umum (Bawaan Sistem)
                             </td>
                         </tr>
 
-                        @php
-                            $defaultFields = [
-                                ['name' => 'ID Aset', 'type' => 'Teks Singkat', 'required' => true],
-                                ['name' => 'Tanggal Mulai Aktif / Perolehan', 'type' => 'Tanggal', 'required' => false],
-                                ['name' => 'Status Kepemilikan', 'type' => 'Pilihan (Dropdown)', 'required' => false],
-                                ['name' => 'Ket. Status Kepemilikan', 'type' => 'Teks Singkat', 'required' => false],
-                                ['name' => 'Status Kondisi Aset', 'type' => 'Pilihan (Dropdown)', 'required' => true],
-                                ['name' => 'Status Operasional', 'type' => 'Pilihan (Dropdown)', 'required' => true],
-                                ['name' => 'Tingkat Kritikalitas', 'type' => 'Pilihan (Dropdown)', 'required' => true],
-                                ['name' => 'Klasifikasi Keamanan', 'type' => 'Pilihan (Dropdown)', 'required' => false],
-                                ['name' => 'Lokasi Aset Saat Ini (Kode)', 'type' => 'Pilihan (Dropdown)', 'required' => true],
-                                ['name' => 'Tanggal Pemeriksaan Terakhir', 'type' => 'Tanggal', 'required' => false],
-                                ['name' => 'Deskripsi / Peran Aset', 'type' => 'Teks Panjang', 'required' => false],
-                                ['name' => 'Keterangan Lokasi Aset', 'type' => 'Teks Panjang', 'required' => false],
-                                ['name' => 'PIC Pencatat', 'type' => 'Teks Singkat', 'required' => true],
-                                ['name' => 'Bidang Pencatat Aset', 'type' => 'Teks Singkat', 'required' => false],
-                            ];
-                        @endphp
-
-                        @foreach($defaultFields as $df)
+                        @foreach(\App\Models\AssetCategoryField::where('asset_category_id', $category->id)->where('group_name', 'ATRIBUT UMUM')->get() as $df)
                         <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                            <td class="px-6 py-3.5 font-medium text-gray-700 dark:text-gray-300">{{ $df['name'] }}</td>
-                            <td class="px-6 py-3.5 text-sm text-gray-500 dark:text-gray-400">{{ $df['type'] }}</td>
+                            <td class="px-6 py-3.5 font-medium text-gray-700 dark:text-gray-300">{{ $df->name }}</td>
+                            <td class="px-6 py-3.5 text-sm text-gray-500">{{ $df->field_type }}</td>
                             <td class="px-6 py-3.5 text-center">
                                 <div class="flex items-center justify-center gap-4">
-                                    {{-- Label Wajib / Opsional --}}
-                                    @if($df['required'])
-                                        <span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700 min-w-[60px]">Wajib</span>
-                                    @else
-                                        <span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-600 min-w-[60px]">Opsional</span>
-                                    @endif
+                                    <span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-medium {{ $df->is_required ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600' }} min-w-[60px]">
+                                        {{ $df->is_required ? 'Wajib' : 'Opsional' }}
+                                    </span>
                                     
-                                    {{-- TOGGLE VISUAL UNTUK ATRIBUT UMUM (menggunakan class 'hidden' bukan 'sr-only' untuk mencegah scroll bug) --}}
+                                    {{-- SAKELAR ASLI (BEKERJA!) --}}
                                     <label class="inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" class="hidden peer" onchange="alert('Untuk mengaktifkan fitur sembunyikan Atribut Bawaan dari tabel, diperlukan penambahan kolom konfigurasi di sistem Database. Saat ini berstatus permanen.'); this.checked = true;" checked>
+                                        <input type="checkbox" class="hidden peer" onchange="toggleTableVisibility({{ $df->id }}, this)" {{ $df->show_in_table ? 'checked' : '' }}>
                                         <div class="relative w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#004A54]"></div>
                                         <span class="ms-2 text-[11px] font-medium text-gray-600">Tampil di Tabel</span>
                                     </label>
                                 </div>
                             </td>
                             <td class="px-6 py-3.5 text-right">
-                                <div class="flex items-center justify-end gap-2">
-                                    {{-- TOMBOL EDIT UMUM (Visual Only) --}}
-                                    <button type="button" onclick="alert('Atribut Bawaan Sistem tidak dapat diedit manual untuk menjaga kestabilan fitur inti.')"
-                                        class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-100 transition-colors" title="Edit (Terkunci)">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                                        </svg>
-                                    </button>
-
-                                    {{-- TOMBOL HAPUS UMUM (Terkunci) --}}
-                                    <button type="button" disabled class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed" title="Atribut Permanen">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                        </svg>
-                                    </button>
-                                </div>
+                                <span class="text-xs text-gray-400 italic">Permanen</span>
                             </td>
                         </tr>
                         @endforeach
 
-                        {{-- ===================== 2. ATRIBUT SPESIFIKASI TAMBAHAN ===================== --}}
+                        {{-- 2. ATRIBUT SPESIFIK --}}
                         <tr class="bg-cyan-50/50 dark:bg-gray-800/80">
-                            <td colspan="4" class="px-6 py-3 text-[11px] font-bold text-[#004A54] dark:text-accent-400 uppercase tracking-widest bg-cyan-50/50 dark:bg-gray-800 border-t border-gray-200">
+                            <td colspan="4" class="px-6 py-3 text-[11px] font-bold text-[#004A54] uppercase tracking-widest border-t border-gray-200">
                                 Spesifikasi Tambahan (Dinamis)
                             </td>
                         </tr>
 
-                        @forelse(\App\Models\AssetCategoryField::where('asset_category_id', $category->id)->orderBy('id')->get() as $field)
-                        <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                            <td class="px-6 py-3.5 font-medium text-gray-800 dark:text-white">{{ $field->name }}</td>
-                            <td class="px-6 py-3.5 text-sm text-gray-500 dark:text-gray-400">{{ $field->field_type }}</td>
+                        @foreach(\App\Models\AssetCategoryField::where('asset_category_id', $category->id)->where(function($q){ $q->where('group_name', '!=', 'ATRIBUT UMUM')->orWhereNull('group_name'); })->orderBy('id')->get() as $field)
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-3.5 font-medium text-gray-800">{{ $field->name }}</td>
+                            <td class="px-6 py-3.5 text-sm text-gray-500">{{ $field->field_type }}</td>
                             <td class="px-6 py-3.5 text-center">
                                 <div class="flex items-center justify-center gap-4">
-                                    {{-- Status Wajib Diisi --}}
-                                    @if($field->is_required)
-                                        <span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-medium bg-red-100 text-red-700 min-w-[60px]">Wajib</span>
-                                    @else
-                                        <span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 text-gray-600 min-w-[60px]">Opsional</span>
-                                    @endif
+                                    <span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-medium {{ $field->is_required ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600' }} min-w-[60px]">
+                                        {{ $field->is_required ? 'Wajib' : 'Opsional' }}
+                                    </span>
                                     
-                                    {{-- TOGGLE SWITCH TAMPIL DI TABEL (REAL-TIME AJAX) --}}
                                     <label class="inline-flex items-center cursor-pointer">
-                                        {{-- Menggunakan class 'hidden' alih-alih 'sr-only' untuk mencegah bug overflow --}}
                                         <input type="checkbox" class="hidden peer" onchange="toggleTableVisibility({{ $field->id }}, this)" {{ $field->show_in_table ? 'checked' : '' }}>
-                                        <div class="relative w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#004A54]"></div>
-                                        <span class="ms-2 text-[11px] font-medium text-gray-600 dark:text-gray-300">Tampil di Tabel</span>
+                                        <div class="relative w-9 h-5 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#004A54]"></div>
+                                        <span class="ms-2 text-[11px] font-medium text-gray-600">Tampil di Tabel</span>
                                     </label>
                                 </div>
                             </td>
                             <td class="px-6 py-3.5 text-right">
                                 <div class="flex items-center justify-end gap-2">
-                                    
-                                    {{-- TOMBOL EDIT --}}
-                                    @php
-                                        $optionsStr = is_array($field->options) ? implode(',', $field->options) : $field->options;
-                                    @endphp
-                                    <button type="button" 
-                                        onclick="editField({{ $field->id }}, '{{ addslashes($field->name) }}', '{{ $field->field_type }}', '{{ addslashes($optionsStr) }}', {{ $field->is_required ? 1 : 0 }}, {{ $field->show_in_table ? 1 : 0 }})" 
-                                        class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-all focus:outline-none" title="Edit Detail">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
-                                        </svg>
+                                    @php $optionsStr = is_array($field->options) ? implode(',', $field->options) : $field->options; @endphp
+                                    <button type="button" onclick="editField({{ $field->id }}, '{{ addslashes($field->name) }}', '{{ $field->field_type }}', '{{ addslashes($optionsStr) }}', {{ $field->is_required ? 1 : 0 }}, {{ $field->show_in_table ? 1 : 0 }})" class="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:text-blue-600 hover:border-blue-400">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" /></svg>
                                     </button>
-
-                                    {{-- TOMBOL HAPUS --}}
-                                    <form action="{{ route('manage-category.fields.destroy', $field->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus spesifikasi dinamis ini secara permanen?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-300 text-gray-500 hover:border-red-500 hover:text-red-600 hover:bg-red-50 transition-all focus:outline-none" title="Hapus">
-                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                            </svg>
+                                    <form action="{{ route('manage-category.fields.destroy', $field->id) }}" method="POST" class="inline-block" onsubmit="return confirm('Hapus?');">
+                                        @csrf @method('DELETE')
+                                        <button type="submit" class="w-8 h-8 flex items-center justify-center rounded border border-gray-200 text-gray-500 hover:text-red-600 hover:border-red-400">
+                                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                                         </button>
                                     </form>
-
                                 </div>
                             </td>
                         </tr>
-                        @empty
-                        <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-gray-400 text-sm">
-                                <svg class="w-8 h-8 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                                </svg>
-                                Belum ada atribut spesifikasi tambahan.<br>
-                                <span class="text-xs">Gunakan form di sebelah kiri untuk menambahkan.</span>
-                            </td>
-                        </tr>
-                        @endforelse
-
+                        @endforeach
                     </tbody>
                 </table>
             </div>

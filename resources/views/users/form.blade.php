@@ -121,22 +121,27 @@
                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white placeholder-gray-400 focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
                         </div>
 
-                        {{-- Departemen / Unit (Dinamis dari Database Units) --}}
+                        {{-- Departemen / Unit (Dinamis dari Database Units + Tom Select) --}}
                         <div>
                             <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
                                 Departemen / Unit <span class="text-red-500">*</span>
                             </label>
-                            <select name="department" required class="...">
-                                <option value="" disabled selected>Pilih Departemen / Unit</option>
-                                @foreach(\App\Models\Unit::orderBy('name')->get() as $unit)
-                                    <option value="{{ $unit->name }}" @selected(old('department', $user->department ?? '') == $unit->name)>
-                                        {{ $unit->name }}
+                            {{-- id="unitSelect" ditambahkan untuk diinisialisasi JS di bawah --}}
+                            <select name="department" id="unitSelect" required 
+                                    class="mt-1.5 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 py-2.5 px-3 text-sm text-gray-800 dark:text-white focus:border-[#004A54] focus:outline-none focus:ring-1 focus:ring-[#004A54]">
+                                <option value="" disabled selected>— Pilih Departemen / Unit —</option>
+                                @php
+                                    $allUnits = \App\Models\Unit::orderBy('level')->orderBy('name')->get();
+                                @endphp
+                                @foreach($allUnits as $unitData)
+                                    <option value="{{ $unitData->name }}" @selected(old('department', $user->department ?? '') == $unitData->name)>
+                                        {{ $unitData->name }} (Level {{ $unitData->level }})
                                     </option>
                                 @endforeach
                             </select>
                         </div>
 
-                        {{-- ROLE / PERAN (DIUBAH MENJADI STI & IT SUPPORT) --}}
+                        {{-- ROLE / PERAN --}}
                         <div>
                             <label class="text-xs font-bold text-gray-700 dark:text-gray-300">
                                 Peran / Hak Akses <span class="text-red-500">*</span>
@@ -200,4 +205,40 @@
 
     </form>
 </main>
+
+{{-- ===================== TOM SELECT UNTUK SEARCH DROPDOWN ===================== --}}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+<style>
+    /* Styling agar Tom Select menyatu sempurna dengan desain Tailwind */
+    .ts-control {
+        border-radius: 0.375rem !important; /* rounded-md */
+        padding: 0.625rem 0.75rem !important; /* py-2.5 px-3 */
+        border-color: #D1D5DB !important; /* border-gray-300 */
+        font-size: 0.875rem !important; /* text-sm */
+        min-height: 42px !important;
+    }
+    .ts-control.focus {
+        border-color: #004A54 !important;
+        box-shadow: 0 0 0 1px #004A54 !important;
+    }
+    .ts-dropdown {
+        border-radius: 0.375rem !important;
+        font-size: 0.875rem !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        new TomSelect('#unitSelect', {
+            create: false,
+            sortField: {
+                field: "text",
+                direction: "asc"
+            },
+            placeholder: '— Ketik nama unit untuk mencari —',
+        });
+    });
+</script>
 @endsection

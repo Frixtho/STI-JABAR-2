@@ -59,7 +59,42 @@ class AssetCategoryController extends Controller
 
     public function fieldsIndex($id)
     {
-        $category = AssetCategory::with('fields')->findOrFail($id);
+        $category = \App\Models\AssetCategory::findOrFail($id);
+
+        // 1. Inisialisasi Atribut Umum secara otomatis ke dalam database
+        $defaultFields = [
+            ['name' => 'ID Aset', 'field_key' => 'asset_id', 'type' => 'text', 'required' => true],
+            ['name' => 'Tanggal Perolehan', 'field_key' => 'acquisition_date', 'type' => 'date', 'required' => false],
+            ['name' => 'Status Kepemilikan', 'field_key' => 'ownership_status', 'type' => 'select', 'required' => false],
+            ['name' => 'Ket. Status Kepemilikan', 'field_key' => 'ownership_desc', 'type' => 'text', 'required' => false],
+            ['name' => 'Status Kondisi', 'field_key' => 'condition_status', 'type' => 'select', 'required' => true],
+            ['name' => 'Status Operasional', 'field_key' => 'operational_status', 'type' => 'select', 'required' => true],
+            ['name' => 'Tingkat Kritikalitas', 'field_key' => 'criticality_level', 'type' => 'select', 'required' => true],
+            ['name' => 'Klasifikasi Keamanan', 'field_key' => 'security_classification', 'type' => 'select', 'required' => false],
+            ['name' => 'Lokasi Aset Saat Ini', 'field_key' => 'unit_name', 'type' => 'select', 'required' => true],
+            ['name' => 'Keterangan Lokasi', 'field_key' => 'location_desc', 'type' => 'text', 'required' => false],
+            ['name' => 'Tanggal Pemeriksaan', 'field_key' => 'last_maintenance_date', 'type' => 'date', 'required' => false],
+            ['name' => 'Deskripsi Aset', 'field_key' => 'description', 'type' => 'text', 'required' => false],
+            ['name' => 'PIC Pencatat', 'field_key' => 'pic', 'type' => 'text', 'required' => true],
+            ['name' => 'Bidang Pencatat', 'field_key' => 'pic_department', 'type' => 'text', 'required' => false],
+        ];
+
+        foreach ($defaultFields as $df) {
+            \App\Models\AssetCategoryField::firstOrCreate(
+                [
+                    'asset_category_id' => $category->id,
+                    'field_key' => $df['field_key'],
+                ],
+                [
+                    'name' => $df['name'],
+                    'field_type' => $df['type'],
+                    'is_required' => $df['required'],
+                    'show_in_table' => false, // Default mati agar tabel tidak kepenuhan
+                    'group_name' => 'ATRIBUT UMUM'
+                ]
+            );
+        }
+
         return view('manageCategoryFields', compact('category'));
     }
 

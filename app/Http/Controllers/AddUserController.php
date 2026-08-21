@@ -38,8 +38,11 @@ class AddUserController extends Controller
     
     public function create()
     {
-        $units = \App\Models\Unit::all();
-        return view('users.form'); 
+        // Ambil semua unit dari database, urutkan berdasarkan level dan nama agar rapi
+        $units = \App\Models\Unit::orderBy('level')->orderBy('name')->get();
+        
+        // Jangan lupa tambahkan compact('units') untuk mengirim datanya ke form
+        return view('users.form', compact('units'));
     }
 
     public function store(Request $request)
@@ -71,8 +74,11 @@ class AddUserController extends Controller
     public function edit($id)
     {
         $user = \App\Models\User::findOrFail($id);
-        $units = \App\Models\Unit::all();
-        return view('users.form', compact('user', 'units'));
+        
+        // Ambil semua unit
+        $units = \App\Models\Unit::orderBy('level')->orderBy('name')->get();
+        
+        return view('users.edit', compact('user', 'units'));
     }
 
     public function update(Request $request, User $user)

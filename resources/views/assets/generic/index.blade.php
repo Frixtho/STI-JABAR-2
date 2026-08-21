@@ -90,23 +90,21 @@
                 </form>
             </div>
 
-            {{-- ===================== TABLE DINAMIS ===================== --}}
+            {{-- ===================== TABLE DINAMIS 100% ===================== --}}
             <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
                 
                 @php
-                    // Ambil field-field yang diatur 'show_in_table' = true
-                    $tableColumns = $currentCategory->fields->where('show_in_table', true);
+                    // Ambil SEMUA field yang diatur 'show_in_table' = true, urutkan berdasarkan ID
+                    $tableColumns = $currentCategory->fields->where('show_in_table', true)->sortBy('id');
                 @endphp
 
-                {{-- Wadah khusus tabel yang memiliki scrollbar horizontal --}}
                 <div class="overflow-x-auto w-full">
                     <table class="w-full text-left text-sm whitespace-nowrap">
                         <thead class="bg-gray-50 dark:bg-gray-900/40 border-b border-gray-200 dark:border-gray-700 text-xs uppercase tracking-wider text-gray-500">
                             <tr>
-                                <th class="px-6 py-4 font-bold">Nama Aset</th>
-                                <th class="px-6 py-4 font-bold">Kode / Functloc</th>
+                                <th class="px-6 py-4 font-bold text-center w-16">No</th>
                                 
-                                {{-- Cetak Header Kolom Dinamis --}}
+                                {{-- CETAK HEADER KOLOM DINAMIS (Atribut Umum & Spesifik) --}}
                                 @foreach($tableColumns as $col)
                                     <th class="px-6 py-4 font-bold">{{ $col->name }}</th>
                                 @endforeach
@@ -115,22 +113,36 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            @forelse($assets as $asset)
+                            @forelse($assets as $index => $asset)
                                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors">
-                                    <td class="px-6 py-3 font-semibold text-gray-800 dark:text-white">{{ $asset->name }}</td>
-                                    <td class="px-6 py-3 text-gray-600 dark:text-gray-300">{{ $asset->code ?? '-' }}</td>
+                                    <td class="px-6 py-3 font-semibold text-gray-600 dark:text-gray-400 text-center">
+                                        {{ $assets->firstItem() + $index }}
+                                    </td>
                                     
-                                    {{-- Cetak Isi Data Kolom Dinamis (Ambil dari JSON) --}}
+                                    {{-- LOOPING ISI DATA DENGAN LOGIKA PEMISAH --}}
                                     @foreach($tableColumns as $col)
-                                        <td class="px-6 py-3 text-gray-600 dark:text-gray-300">
-                                            {{ $asset->specifications[$col->field_key] ?? '-' }}
+                                        <td class="px-6 py-3 text-gray-700 dark:text-gray-300">
+                                            @if($col->group_name == 'ATRIBUT UMUM')
+                                                {{-- Jika Atribut Umum, baca dari properti class (tabel utama) --}}
+                                                @php $val = $asset->{$col->field_key}; @endphp
+                                                
+                                                {{-- Jika formatnya tanggal, ubah ke format d-m-Y agar enak dibaca --}}
+                                                @if(in_array($col->field_type, ['date']) && !empty($val))
+                                                    {{ date('d-m-Y', strtotime($val)) }}
+                                                @else
+                                                    {{ $val ?? '-' }}
+                                                @endif
+                                            @else
+                                                {{-- Jika Atribut Spesifik, baca dari JSON specifications --}}
+                                                {{ $asset->specifications[$col->field_key] ?? '-' }}
+                                            @endif
                                         </td>
                                     @endforeach
 
                                     <td class="px-6 py-3 text-right">
                                         <div class="flex items-center justify-end gap-2">
                                             
-                                            {{-- Tombol Edit dengan Kotak Border --}}
+                                            {{-- Tombol Edit --}}
                                             <a href="{{ route('manage-asset.generic.edit', ['category' => $currentCategory->slug, 'id' => $asset->id]) }}" 
                                                class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md text-gray-500 hover:border-[#004A54] hover:text-[#004A54] hover:bg-gray-50 transition-all shadow-sm" title="Edit">
                                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -138,8 +150,8 @@
                                                 </svg>
                                             </a>
 
-                                            {{-- Tombol Hapus dengan Kotak Border --}}
-                                            <form action="{{ route('manage-asset.generic.destroy', ['category' => $currentCategory->slug, 'id' => $asset->id]) }}" method="POST" onsubmit="return confirm('Hapus aset ini?')">
+                                            {{-- Tombol Hapus --}}
+                                            <form action="{{ route('manage-asset.generic.destroy', ['category' => $currentCategory->slug, 'id' => $asset->id]) }}" method="POST" onsubmit="return confirm('Hapus aset ini secara permanen?')">
                                                 @csrf @method('DELETE')
                                                 <button type="submit" class="w-8 h-8 flex items-center justify-center border border-gray-200 rounded-md text-gray-500 hover:border-red-500 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm" title="Hapus">
                                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -153,8 +165,13 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ 3 + $tableColumns->count() }}" class="px-6 py-10 text-center text-gray-500">
-                                        Belum ada data. Silakan tambah aset baru.
+                                    <td colspan="{{ 2 + $tableColumns->count() }}" class="px-6 py-10 text-center text-gray-500">
+                                        <div class="flex flex-col items-center justify-center">
+                                            <svg class="w-10 h-10 text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                                            </svg>
+                                            Belum ada data aset yang ditemukan. Silakan tambah aset baru.
+                                        </div>
                                     </td>
                                 </tr>
                             @endforelse
